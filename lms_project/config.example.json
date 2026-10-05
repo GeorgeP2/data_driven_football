@@ -1,0 +1,11 @@
+{
+  "n_players": 14,
+  "n_alive": 9,
+  "stake": 1.0,
+  "rebuy": 1.0,
+  "pot": 14.0,
+  "skill_edge": 1.0,
+  "opp_sharpness": 3.0,
+  "me_used": ["Arsenal", "Man City"],
+  "opp_used": { "Opponent A": ["Liverpool"], "Opponent B": ["Chelsea", "Arsenal"] }
+}

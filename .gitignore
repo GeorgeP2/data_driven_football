@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Generated data (re-download with fetch_data.py / backtest.py)
+lms_project/fd_cache/
+lms_project/*.csv
+
+# Personal pool state (copy config.example.json -> config.json)
+lms_project/config.json
+
+# Local notes
+lms_project/conversation.md
