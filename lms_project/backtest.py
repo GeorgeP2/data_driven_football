@@ -36,6 +36,7 @@ Usage
 import argparse
 import os
 import sys
+import zlib
 from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
@@ -43,12 +44,12 @@ import pandas as pd
 from scipy.optimize import linear_sum_assignment
 
 import lms_optimiser as L
+from fd_common import canon, read_fd_csv
 
 BASE = "https://football-data.co.uk/mmz4281/{s}/E0.csv"
 ODDS_SETS = [("AvgH", "AvgD", "AvgA"), ("BbAvH", "BbAvD", "BbAvA"), ("B365H", "B365D", "B365A"),
              ("PSH", "PSD", "PSA"), ("WHH", "WHD", "WHA"), ("IWH", "IWD", "IWA"),
              ("LBH", "LBD", "LBA"), ("GBH", "GBD", "GBA")]
-NAME_MAP = {"Man United": "Man Utd", "Tottenham": "Spurs"}
 
 
 # --------------------------------------------------------------------------- #
@@ -66,15 +67,14 @@ def load_season(code, cache_dir):
     path = os.path.join(cache_dir, f"E0_{code}.csv")
     if not os.path.exists(path):
         os.makedirs(cache_dir, exist_ok=True)
-        pd.read_csv(BASE.format(s=code), encoding_errors="replace",
-                    on_bad_lines="skip").to_csv(path, index=False)
-    df = pd.read_csv(path, encoding_errors="replace", on_bad_lines="skip")
+        read_fd_csv(BASE.format(s=code)).to_csv(path, index=False)
+    df = read_fd_csv(path)
     df = df.dropna(subset=["HomeTeam", "AwayTeam", "FTHG", "FTAG"])
     df["Date"] = pd.to_datetime(df["Date"], dayfirst=True, format="mixed", errors="coerce")
     df = df.dropna(subset=["Date"]).sort_values("Date", kind="stable").reset_index(drop=True)
     out = pd.DataFrame({
-        "date": df["Date"], "home": df["HomeTeam"].str.strip().replace(NAME_MAP),
-        "away": df["AwayTeam"].str.strip().replace(NAME_MAP),
+        "date": df["Date"], "home": df["HomeTeam"].map(canon),
+        "away": df["AwayTeam"].map(canon),
         "hg": df["FTHG"].astype(int), "ag": df["FTAG"].astype(int),
     })
     o = np.full((len(df), 3), np.nan)
@@ -88,14 +88,25 @@ def load_season(code, cache_dir):
     return out
 
 
-def assign_gw(df):
-    """Round k = each team's k-th match (robust to postponements; a team never plays twice in a round)."""
-    cnt, gws = {}, []
-    for h, a in zip(df.home, df.away):
-        g = max(cnt.get(h, 0), cnt.get(a, 0)) + 1
-        cnt[h] = cnt[a] = g
-        gws.append(g)
-    return gws
+def assign_gw(df, gap_days=2, min_matches=5):
+    """Gameweek per match (df sorted by date), 0 = dropped.
+    Matches are clustered by date (a new cluster starts after a blank day), and a cluster that
+    holds a weekend plus a midweek round is split by each team's 1st/2nd/... appearance in it.
+    Rounds with fewer than `min_matches` matches (isolated rearranged fixtures) are dropped, as
+    an LMS pool would not treat them as a gameweek. Counting matches per team over the whole
+    season instead lets every postponement push later rounds out of step."""
+    dates = pd.to_datetime(df.date).values
+    keys, cluster, cnt = [], 0, {}
+    for i, (h, a) in enumerate(zip(df.home, df.away)):
+        if i and (dates[i] - dates[i - 1]) / np.timedelta64(1, "D") >= gap_days:
+            cluster, cnt = cluster + 1, {}
+        sub = max(cnt.get(h, 0), cnt.get(a, 0)) + 1
+        cnt[h] = cnt[a] = sub
+        keys.append((cluster, sub))
+    sizes = pd.Series(keys).value_counts()
+    kept = sorted(k for k in sizes.index if sizes[k] >= min_matches)
+    num = {k: g for g, k in enumerate(kept, start=1)}
+    return [num.get(k, 0) for k in keys]
 
 
 # --------------------------------------------------------------------------- #
@@ -106,6 +117,8 @@ class Season:
         self.code = code
         cur = cur.copy()
         cur["gw"] = assign_gw(cur)
+        played = cur  # every match, incl. dropped catch-ups, is still history for the model
+        cur = cur[cur.gw > 0].reset_index(drop=True)
         self.cur = cur
         self.teams = sorted(set(cur.home) | set(cur.away))
         self.T = len(self.teams)
@@ -139,7 +152,7 @@ class Season:
         self.Pmodel = []       # per version: (G+1, T) win probabilities
         for rg in self.refit_gws:
             cutoff = first_date[rg]
-            past = pd.concat([hist, cur[cur.date < cutoff][hist.columns]]).tail(hist_matches)
+            past = pd.concat([hist, played[played.date < cutoff][hist.columns]]).tail(hist_matches)
             dc = L.DixonColes().fit(past[["date", "home", "away", "hg", "ag"]])
             mm = np.array([dc.predict(x, y) for x, y in zip(cur.home, cur.away)])
             self.model_match.append(mm)
@@ -250,10 +263,12 @@ def make_plan_mc(H, top_n, n_sims, skill_edge=1.0, k=3.0):
                       opp_sharpness=k, opp_used=opp_used)
         fp = S.fp_rows(g, H)
         gws = list(range(g, min(g + H, S.G + 1)))
+        draws = L.sample_draws(fp, gws, S.teams, n_alive - 1, n_sims,
+                               seed=zlib.crc32(f"{S.code}-{g}".encode()))
         best, best_ev = None, -1e9
         for t, plan, surv in cands:
             plan = plan[:len(gws)]
-            st = L.simulate_candidate(fp, gws, S.teams, P, plan, pool, n_sims)
+            st = L.simulate_candidate(fp, gws, S.teams, P, plan, pool, n_sims, draws=draws)
             if st["ev"] > best_ev:
                 best, best_ev = t, st["ev"]
         return best
@@ -353,7 +368,7 @@ def process_season(args):
         pool_starts = [1] if name == "plan_mc" else list(range(1, 1 + cfg["pool_starts"]))
         for s in pool_starts:
             for rep in range(cfg["reps"]):
-                r = run_pool(S, s, strat, seed=hash((code, s, rep)) % (2**31), N=cfg["n"], k=cfg["k"])
+                r = run_pool(S, s, strat, seed=zlib.crc32(f"{code}-{s}-{rep}".encode()), N=cfg["n"], k=cfg["k"])
                 pool_rows.append({"season": code, "strategy": name, "start": s, "rep": rep, **r})
     return solo_rows, pool_rows
 
@@ -367,6 +382,34 @@ def boot_se(df, num, den, n=1000, seed=0):
         s = g.iloc[rng.integers(0, len(g), len(g))]
         vals.append(s[num].sum() / s[den].sum())
     return float(np.std(vals))
+
+
+def load_base(first, last, cache_dir):
+    """[(season code, history before it, season matches)] for each complete test season."""
+    test = season_codes(first, last)
+    pre = season_codes(f"{(int(first[:2]) - 3) % 100:02d}00", f"{(int(first[:2]) - 1) % 100:02d}00")
+    codes = pre + test
+    frames = {}
+    for c in codes:
+        try:
+            frames[c] = load_season(c, cache_dir)
+        except Exception as e:
+            print(f"! skip season {c}: {e}", file=sys.stderr)
+    base = []
+    for c in test:
+        if c not in frames:
+            continue
+        cur = frames[c]
+        if len(cur) < 370:
+            print(f"! season {c} incomplete ({len(cur)} matches), skipped", file=sys.stderr)
+            continue
+        prior = [frames[p] for p in codes[:codes.index(c)] if p in frames]
+        if not prior:
+            print(f"! season {c} has no history, skipped", file=sys.stderr)
+            continue
+        hist = pd.concat(prior)[["date", "home", "away", "hg", "ag"]].reset_index(drop=True)
+        base.append((c, hist, cur))
+    return base
 
 
 def main():
@@ -393,30 +436,7 @@ def main():
     ap.add_argument("--out", default="backtest_runs")
     args = ap.parse_args()
 
-    test = season_codes(args.first, args.last)
-    pre = season_codes(f"{(int(args.first[:2]) - 3) % 100:02d}00", f"{(int(args.first[:2]) - 1) % 100:02d}00")
-    codes = pre + test
-    frames = {}
-    for c in codes:
-        try:
-            frames[c] = load_season(c, args.cache_dir)
-        except Exception as e:
-            print(f"! skip season {c}: {e}", file=sys.stderr)
-    base = []
-    for c in test:
-        if c not in frames:
-            continue
-        cur = frames[c]
-        if len(cur) < 370:
-            print(f"! season {c} incomplete ({len(cur)} matches), skipped", file=sys.stderr)
-            continue
-        prior = [frames[p] for p in codes[:codes.index(c)] if p in frames]
-        if not prior:
-            print(f"! season {c} has no history, skipped", file=sys.stderr)
-            continue
-        hist = pd.concat(prior)[["date", "home", "away", "hg", "ag"]].reset_index(drop=True)
-        base.append((c, hist, cur))
-
+    base = load_base(args.first, args.last, args.cache_dir)
     for w in args.odds_weight:
         cfg = {**vars(args), "odds_weight": w}
         jobs = [(c, h, cu, cfg) for c, h, cu in base]

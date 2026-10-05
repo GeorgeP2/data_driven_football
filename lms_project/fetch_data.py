@@ -25,7 +25,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-from teams import canon
+from fd_common import canon, read_fd_csv
 
 BASE = "https://football-data.co.uk"
 SEASON_URL = BASE + "/mmz4281/{s}/E0.csv"
@@ -35,7 +35,7 @@ FIXTURES_URL = BASE + "/fixtures.csv"
 ODDS_SETS = [("AvgH", "AvgD", "AvgA"), ("PSH", "PSD", "PSA"), ("B365H", "B365D", "B365A")]
 
 def read_fd(src: str) -> pd.DataFrame:
-    df = pd.read_csv(src, encoding_errors="replace", on_bad_lines="skip")
+    df = read_fd_csv(src)
     df = df.dropna(subset=["HomeTeam", "AwayTeam"])
     if "Div" in df.columns:
         df = df[df["Div"] == "E0"]
