@@ -12,6 +12,7 @@ Each idea lives in its own top-level folder, is reproducible and tested, and fol
 | Project | Area | Status | Highlights |
 |---------|------|--------|------------|
 | [Last Man Standing optimiser](lms_project) | Optimisation & simulation | 🚧 | Monte Carlo pot-equity picks return +0.73 to +0.98 per stake against an office-pool field, against −0.11 to −0.18 for always backing the favourite |
+<!-- projects:end -->
 
 ## Repository layout
 
@@ -25,8 +26,10 @@ Each idea lives in its own top-level folder, is reproducible and tested, and fol
 │   ├── reports/figures/      # committed figures used in the README
 │   ├── data/                 # git-ignored
 │   └── outputs/              # git-ignored (run results)
+├── _template/                # copied by `make new-project`
 ├── src/football/             # shared utilities (football-data.co.uk loading, team names)
 ├── tests/                    # tests for the shared package
+├── scripts/                  # repo tooling
 └── docs/                     # conventions
 ```
 
@@ -42,9 +45,13 @@ make check            # lint, type-check and test everything
 
 ### Adding a project
 
-Create a new top-level folder named `<idea>_project/` with the same layout as
-[`lms_project/`](lms_project), give its package under `src/` a unique name, and add a row to the
-table above. See [docs/conventions.md](docs/conventions.md) for the house rules.
+```bash
+make new-project name="Expected Goals Model" category=ml
+```
+
+This copies `_template/` to `expected_goals_model_project/`, fills in names, and adds a row to the
+table above. Categories: `analytics`, `stats`, `ml`, `ts`, `dl`, `opt`, `nlp`, `llm`, `de`.
+See [docs/conventions.md](docs/conventions.md) for the house rules.
 
 ## How this was built
 

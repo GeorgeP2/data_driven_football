@@ -15,12 +15,16 @@ shared utilities in `src/football/`.
 make setup          # create .venv, install core+dev+notebooks, install pre-commit hooks
 make check          # lint + typecheck + tests (same as CI)
 make format         # ruff fix + format
+make new-project name="Title" category=ml   # scaffold <package>_project/ from _template
 ```
 
 Use `.venv/bin/...` for tools.
 
 ## Non-obvious details
 
+- New projects come from `make new-project` (it renames the package and adds a row to the README
+  table above the `<!-- projects:end -->` marker). Don't copy `_template` by hand.
+- `_template/` contains `{{placeholders}}`, so ruff, pytest and `conftest.py` exclude it on purpose.
 - Root `conftest.py` adds every `*/src` to `sys.path` for tests, so each project's package name must
   be unique (`lms` for `lms_project`).
 - Run project code from its folder: `PYTHONPATH=src python -m <package>.<module>`

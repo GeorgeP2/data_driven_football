@@ -4,7 +4,7 @@ The goal: any project can be understood in 2 minutes from its README and reprodu
 
 ## Structure
 
-- One top-level folder per football idea: `<idea>_project/`.
+- One top-level folder per football idea: `<idea>_project/`. Create it with `make new-project`.
 - Pipeline code lives in `src/<package>/` as importable modules, run with
   `PYTHONPATH=src python -m <package>.<module>`. Notebooks call into it rather than duplicating logic.
 - Package names must be unique across projects (the root `conftest.py` puts every `*/src` on one path).

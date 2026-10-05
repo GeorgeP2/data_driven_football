@@ -8,5 +8,5 @@ import sys
 from pathlib import Path
 
 for src in sorted(Path(__file__).parent.glob("*/src")):
-    if src.parent.name != "src":
+    if src.parent.name not in {"src", "_template"}:
         sys.path.insert(0, str(src))
