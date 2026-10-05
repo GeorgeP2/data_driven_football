@@ -8,7 +8,7 @@ _What question is being answered, and why does it matter? Who would use the resu
 
 ## Data
 
-| Source | What | Terms | Use |
+| Source | What | Licence | Use |
 |--------|------|-------|-----|
 | _link_ | | | |
 

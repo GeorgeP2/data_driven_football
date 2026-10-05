@@ -39,7 +39,7 @@ cache seasons in `data/fd_cache/`; `lms.fetch_data` writes `data/results.csv` an
 | Monte Carlo pot equity (`mc_h4_k5`) | **+0.73 to +0.98** |
 
 Full write-up in [docs/research.md](docs/research.md); next steps in
-[docs/further-research.md](docs/further-research.md).
+[docs/further-research.md](docs/further-research.md); plan in [docs/roadmap.md](docs/roadmap.md).
 
 ## Key takeaways
 

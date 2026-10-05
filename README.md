@@ -22,6 +22,7 @@ Each idea lives in its own top-level folder, is reproducible and tested, and fol
 │   ├── README.md             # problem, data, approach, results
 │   ├── src/<package>/        # pipeline code, run with `python -m <package>.<module>`
 │   ├── tests/
+│   ├── notebooks/            # EDA notebooks (outputs stripped)
 │   ├── docs/                 # research notes
 │   ├── reports/figures/      # committed figures used in the README
 │   ├── data/                 # git-ignored
