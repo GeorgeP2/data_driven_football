@@ -220,17 +220,20 @@ __marimo__/
 .streamlit/secrets.toml
 
 # --- Project-specific ---
-# IDE / OS
-.idea/
-*.iml
-.DS_Store
-
-# Generated data (re-download with fetch_data.py / backtest.py)
-lms_project/fd_cache/
-lms_project/*.csv
+# Per-project data and run outputs stay local (keep folder skeleton)
+*/data/*
+!*/data/.gitkeep
+!*/data/README.md
+*/outputs/
 
 # Personal pool state (copy config.example.json -> config.json)
 lms_project/config.json
 
 # Local notes
 lms_project/conversation.md
+
+# OS / editors
+.DS_Store
+.idea/
+*.iml
+.vscode/

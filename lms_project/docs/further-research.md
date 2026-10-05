@@ -98,7 +98,7 @@ Results stay 100% real.
 - **They are not independent.** Every order is a rearrangement of the same 912 rounds and the same
   results, like the 52! orders of a deck that still holds only 52 cards. Shuffling removes luck of
   the **order** (which week the big upset lands in); it does not create new rounds. Error bars must
-  still come from resampling **real seasons** (as `tournament.py`'s season bootstrap does).
+  still come from resampling **real seasons** (as `lms.tournament`'s season bootstrap does).
   Treating 10,000 shuffles as 10,000 samples would make them far too narrow.
 - **Diminishing returns:** pools last about 3–5 weeks, so what matters is mainly which rounds come
   first. There are about 1.8 million distinct 4-round openings per season, and a few hundred
@@ -154,7 +154,7 @@ and swap real results within each group. This keeps the empirical calibration ex
 | Final verdict | **real results only**, on held-out seasons |
 
 Proposed split: train and tune on shuffles of 18 seasons, test on the real results of the other 6.
-Implementation: `--shuffle-rounds N` and `--redraw-results K` flags in `tournament.py`.
+Implementation: `--shuffle-rounds N` and `--redraw-results K` flags in `lms.tournament`.
 
 ## 5. Hybrid strategy that changes with the game state
 
@@ -167,7 +167,7 @@ The right amount of differentiation plausibly depends on the state:
 The MC already reacts to state implicitly. An explicit hybrid makes its parameters functions of the
 state: k(n_alive), H(week), and an exact solver below a threshold. **Keep it to 2–3 parameters**,
 choose them on augmented training seasons and confirm on held-out real seasons. Add as a
-`hybrid_...` entrant in `tournament.py`.
+`hybrid_...` entrant in `lms.tournament`.
 
 ## 6. Exact endgame solver
 

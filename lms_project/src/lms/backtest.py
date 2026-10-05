@@ -27,12 +27,13 @@ Strategies
   plan_mc : plan shortlist + Monte Carlo pot-equity scoring (slow; use --mc)
 
 Usage
-  python backtest.py                       # all seasons 2000/01 .. last complete, downloads + caches CSVs
-  python backtest.py --first 1415 --last 2425 --jobs 4
-  python backtest.py --mc --mc-starts 1    # include the slow Monte Carlo strategy
-  python backtest.py --k 2 --horizon 6     # sensitivity checks
-  python backtest.py --odds-weight 0.6 0.8 1.0   # sweep the odds/model blend
+  python -m lms.backtest    # all seasons 2000/01 .. last complete, downloads + caches CSVs
+  python -m lms.backtest --first 1415 --last 2425 --jobs 4
+  python -m lms.backtest --mc --mc-starts 1    # include the slow Monte Carlo strategy
+  python -m lms.backtest --k 2 --horizon 6     # sensitivity checks
+  python -m lms.backtest --odds-weight 0.6 0.8 1.0   # sweep the odds/model blend
 """
+
 import argparse
 import os
 import sys
@@ -43,13 +44,20 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import linear_sum_assignment
 
-import lms_optimiser as L
-from fd_common import canon, read_fd_csv
+from football.football_data import canon, read_fd_csv
+from lms import optimiser as L
 
 BASE = "https://football-data.co.uk/mmz4281/{s}/E0.csv"
-ODDS_SETS = [("AvgH", "AvgD", "AvgA"), ("BbAvH", "BbAvD", "BbAvA"), ("B365H", "B365D", "B365A"),
-             ("PSH", "PSD", "PSA"), ("WHH", "WHD", "WHA"), ("IWH", "IWD", "IWA"),
-             ("LBH", "LBD", "LBA"), ("GBH", "GBD", "GBA")]
+ODDS_SETS = [
+    ("AvgH", "AvgD", "AvgA"),
+    ("BbAvH", "BbAvD", "BbAvA"),
+    ("B365H", "B365D", "B365A"),
+    ("PSH", "PSD", "PSA"),
+    ("WHH", "WHD", "WHA"),
+    ("IWH", "IWD", "IWA"),
+    ("LBH", "LBD", "LBA"),
+    ("GBH", "GBD", "GBA"),
+]
 
 
 # --------------------------------------------------------------------------- #
@@ -57,10 +65,13 @@ ODDS_SETS = [("AvgH", "AvgD", "AvgA"), ("BbAvH", "BbAvD", "BbAvA"), ("B365H", "B
 # --------------------------------------------------------------------------- #
 def season_codes(first, last):
     """'0001' ... '2425' (inclusive), as two-digit year pairs."""
-    f, l = int(first[:2]), int(last[:2])
+    f, la = int(first[:2]), int(last[:2])
+
     # years 00..99 wrap: treat >=90 as 19xx
-    def y(v): return v + (1900 if v >= 90 else 2000)
-    return [f"{a % 100:02d}{(a + 1) % 100:02d}" for a in range(y(f), y(l) + 1)]
+    def y(v):
+        return v + (1900 if v >= 90 else 2000)
+
+    return [f"{a % 100:02d}{(a + 1) % 100:02d}" for a in range(y(f), y(la) + 1)]
 
 
 def load_season(code, cache_dir):
@@ -72,15 +83,19 @@ def load_season(code, cache_dir):
     df = df.dropna(subset=["HomeTeam", "AwayTeam", "FTHG", "FTAG"])
     df["Date"] = pd.to_datetime(df["Date"], dayfirst=True, format="mixed", errors="coerce")
     df = df.dropna(subset=["Date"]).sort_values("Date", kind="stable").reset_index(drop=True)
-    out = pd.DataFrame({
-        "date": df["Date"], "home": df["HomeTeam"].map(canon),
-        "away": df["AwayTeam"].map(canon),
-        "hg": df["FTHG"].astype(int), "ag": df["FTAG"].astype(int),
-    })
+    out = pd.DataFrame(
+        {
+            "date": df["Date"],
+            "home": df["HomeTeam"].map(canon),
+            "away": df["AwayTeam"].map(canon),
+            "hg": df["FTHG"].astype(int),
+            "ag": df["FTAG"].astype(int),
+        }
+    )
     o = np.full((len(df), 3), np.nan)
     for h, d, a in ODDS_SETS:
         if all(c in df.columns for c in (h, d, a)):
-            v = df[[h, d, a]].apply(pd.to_numeric, errors="coerce").values
+            v = df[[h, d, a]].apply(pd.to_numeric, errors="coerce").to_numpy()
             ok = np.isnan(o[:, 0]) & ~np.isnan(v).any(axis=1) & (v > 1).all(axis=1)
             o[ok] = v[ok]
     out[["odds_h", "odds_d", "odds_a"]] = o
@@ -95,9 +110,9 @@ def assign_gw(df, gap_days=2, min_matches=5):
     Rounds with fewer than `min_matches` matches (isolated rearranged fixtures) are dropped, as
     an LMS pool would not treat them as a gameweek. Counting matches per team over the whole
     season instead lets every postponement push later rounds out of step."""
-    dates = pd.to_datetime(df.date).values
+    dates = pd.to_datetime(df.date).to_numpy()
     keys, cluster, cnt = [], 0, {}
-    for i, (h, a) in enumerate(zip(df.home, df.away)):
+    for i, (h, a) in enumerate(zip(df.home, df.away, strict=True)):
         if i and (dates[i] - dates[i - 1]) / np.timedelta64(1, "D") >= gap_days:
             cluster, cnt = cluster + 1, {}
         sub = max(cnt.get(h, 0), cnt.get(a, 0)) + 1
@@ -124,15 +139,16 @@ class Season:
         self.T = len(self.teams)
         tix = {t: i for i, t in enumerate(self.teams)}
         self.G = int(cur.gw.max())
-        h = cur.home.map(tix).values
-        a = cur.away.map(tix).values
-        gw = cur.gw.values
+        h = cur.home.map(tix).to_numpy()
+        a = cur.away.map(tix).to_numpy()
+        gw = cur.gw.to_numpy()
         M = len(cur)
 
         # actual outcomes: win[g, t]
         self.win = np.zeros((self.G + 1, self.T + 1), dtype=bool)  # extra col = "no pick"
-        self.win[gw[cur.hg.values > cur.ag.values], h[cur.hg.values > cur.ag.values]] = True
-        self.win[gw[cur.ag.values > cur.hg.values], a[cur.ag.values > cur.hg.values]] = True
+        hg, ag = cur.hg.to_numpy(), cur.ag.to_numpy()
+        self.win[gw[hg > ag], h[hg > ag]] = True
+        self.win[gw[ag > hg], a[ag > hg]] = True
 
         # odds probs per match (Shin de-vig)
         po = np.full((M, 3), np.nan)
@@ -149,12 +165,12 @@ class Season:
         self.version[0] = 0
         first_date = cur.groupby("gw").date.min()
         self.model_match = []  # per version: (M,3) model probs
-        self.Pmodel = []       # per version: (G+1, T) win probabilities
+        self.Pmodel = []  # per version: (G+1, T) win probabilities
         for rg in self.refit_gws:
             cutoff = first_date[rg]
             past = pd.concat([hist, played[played.date < cutoff][hist.columns]]).tail(hist_matches)
             dc = L.DixonColes().fit(past[["date", "home", "away", "hg", "ag"]])
-            mm = np.array([dc.predict(x, y) for x, y in zip(cur.home, cur.away)])
+            mm = np.array([dc.predict(x, y) for x, y in zip(cur.home, cur.away, strict=True)])
             self.model_match.append(mm)
             self.Pmodel.append(self._to_win_matrix(mm, gw, h, a))
 
@@ -162,7 +178,9 @@ class Season:
         self.now_match = np.zeros((M, 3))
         for i in range(M):
             mm = self.model_match[self.version[gw[i]]][i]
-            self.now_match[i] = (odds_weight * po[i] + (1 - odds_weight) * mm) if self.has_odds[i] else mm
+            self.now_match[i] = (
+                (odds_weight * po[i] + (1 - odds_weight) * mm) if self.has_odds[i] else mm
+            )
             self.now_match[i] /= self.now_match[i].sum()
         self.Pnow = self._to_win_matrix(self.now_match, gw, h, a)
         self.gw, self.h, self.a = gw, h, a
@@ -175,7 +193,10 @@ class Season:
         return P
 
     def forecast(self, g, H):
-        """Win-prob matrix for gameweeks g..g+H-1 (week g from odds blend, later weeks model only)."""
+        """Win-prob matrix for gameweeks g..g+H-1.
+
+        Week g uses the odds blend, later weeks the model only.
+        """
         v = self.version[g]
         rows = [self.Pnow[g]] + [self.Pmodel[v][g + j] for j in range(1, H) if g + j <= self.G]
         return np.vstack(rows)
@@ -185,9 +206,17 @@ class Season:
         sel = (self.gw >= g) & (self.gw < g + H)
         idx = np.flatnonzero(sel)
         p = np.where((self.gw[idx] == g)[:, None], self.now_match[idx], self.model_match[v][idx])
-        return pd.DataFrame({"gw": self.gw[idx], "home": [self.teams[i] for i in self.h[idx]],
-                             "away": [self.teams[i] for i in self.a[idx]],
-                             "p_h": p[:, 0], "p_d": p[:, 1], "p_a": p[:, 2], "src": "bt"})
+        return pd.DataFrame(
+            {
+                "gw": self.gw[idx],
+                "home": [self.teams[i] for i in self.h[idx]],
+                "away": [self.teams[i] for i in self.a[idx]],
+                "p_h": p[:, 0],
+                "p_d": p[:, 1],
+                "p_a": p[:, 2],
+                "src": "bt",
+            }
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -210,6 +239,7 @@ def crowd_pick(p, used_mask, k, rng):
 def make_crowd(k):
     def f(S, g, used, state):
         return crowd_pick(S.Pnow[g], _avail(S, used), k, state["rng_me"])
+
     return f
 
 
@@ -238,6 +268,7 @@ def make_plan(H):
         r, c = linear_sum_assignment(cost)
         t = int(cols[c[np.argmin(r)]])
         return t if P[0, t] > 0 else strat_greedy(S, g, used, state)
+
     return f
 
 
@@ -257,21 +288,31 @@ def make_plan_mc(H, top_n, n_sims, skill_edge=1.0, k=3.0):
         cands = cands[:top_n]
         N = state["N"]
         n_alive = int(state["alive_opp"].sum()) + 1
-        opp_used = {f"o{j}": [S.teams[t] for t in np.flatnonzero(state["used_opp"][j])]
-                    for j in np.flatnonzero(state["alive_opp"])}
-        pool = L.Pool(n_players=N, n_alive=n_alive, pot=state["pot"], skill_edge=skill_edge,
-                      opp_sharpness=k, opp_used=opp_used)
+        opp_used = {
+            f"o{j}": [S.teams[t] for t in np.flatnonzero(state["used_opp"][j])]
+            for j in np.flatnonzero(state["alive_opp"])
+        }
+        pool = L.Pool(
+            n_players=N,
+            n_alive=n_alive,
+            pot=state["pot"],
+            skill_edge=skill_edge,
+            opp_sharpness=k,
+            opp_used=opp_used,
+        )
         fp = S.fp_rows(g, H)
         gws = list(range(g, min(g + H, S.G + 1)))
-        draws = L.sample_draws(fp, gws, S.teams, n_alive - 1, n_sims,
-                               seed=zlib.crc32(f"{S.code}-{g}".encode()))
+        draws = L.sample_draws(
+            fp, gws, S.teams, n_alive - 1, n_sims, seed=zlib.crc32(f"{S.code}-{g}".encode())
+        )
         best, best_ev = None, -1e9
-        for t, plan, surv in cands:
-            plan = plan[:len(gws)]
+        for t, plan, _surv in cands:
+            plan = plan[: len(gws)]
             st = L.simulate_candidate(fp, gws, S.teams, P, plan, pool, n_sims, draws=draws)
             if st["ev"] > best_ev:
                 best, best_ev = t, st["ev"]
         return best
+
     return f
 
 
@@ -293,9 +334,13 @@ def run_solo(S, start, strategy, cap=12):
 
 def run_pool(S, start, strategy, seed, N=14, k=3.0):
     rng = np.random.default_rng(seed)
-    state = {"rng_me": np.random.default_rng(seed + 10_000), "N": N,
-             "used_opp": np.zeros((N - 1, S.T), bool), "alive_opp": np.ones(N - 1, bool),
-             "pot": float(N)}
+    state = {
+        "rng_me": np.random.default_rng(seed + 10_000),
+        "N": N,
+        "used_opp": np.zeros((N - 1, S.T), bool),
+        "alive_opp": np.ones(N - 1, bool),
+        "pot": float(N),
+    }
     used_me, me_alive, resets = set(), True, 0
     stake_me, weeks_me, me_streak_open = 1.0, 0, True
     ended, payout = False, 0.0
@@ -342,8 +387,13 @@ def run_pool(S, start, strategy, seed, N=14, k=3.0):
             break
     if not ended and me_alive:
         payout = state["pot"] / (int(state["alive_opp"].sum()) + 1)
-    return {"net": payout - stake_me, "stake": stake_me, "sole_win": payout >= state["pot"] - 1e-9,
-            "resets": resets, "weeks_first": weeks_me}
+    return {
+        "net": payout - stake_me,
+        "stake": stake_me,
+        "sole_win": payout >= state["pot"] - 1e-9,
+        "resets": resets,
+        "weeks_first": weeks_me,
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -352,9 +402,16 @@ def run_pool(S, start, strategy, seed, N=14, k=3.0):
 def process_season(args):
     code, hist, cur, cfg = args
     S = Season(code, hist, cur, cfg["refit_every"], cfg["hist_matches"], cfg["odds_weight"])
-    strategies = {"random": strat_random, "crowd": make_crowd(cfg["k"]), "greedy": strat_greedy, "plan": make_plan(cfg["horizon"])}
+    strategies = {
+        "random": strat_random,
+        "crowd": make_crowd(cfg["k"]),
+        "greedy": strat_greedy,
+        "plan": make_plan(cfg["horizon"]),
+    }
     if cfg["mc"]:
-        strategies["plan_mc"] = make_plan_mc(cfg["horizon"], cfg["mc_top"], cfg["mc_sims"], k=cfg["k"])
+        strategies["plan_mc"] = make_plan_mc(
+            cfg["horizon"], cfg["mc_top"], cfg["mc_sims"], k=cfg["k"]
+        )
     solo_rows, pool_rows = [], []
     for name, strat in strategies.items():
         if name == "plan_mc":
@@ -363,12 +420,25 @@ def process_season(args):
             starts = list(range(1, min(S.G - 4, cfg["max_start"]) + 1))
         if name not in ("crowd", "plan_mc"):  # random, greedy, plan all get solo runs
             for s in starts:
-                solo_rows.append({"season": code, "strategy": name, "start": s,
-                                  "survived": run_solo(S, s, strat, cap=cfg["cap"])})
+                solo_rows.append(
+                    {
+                        "season": code,
+                        "strategy": name,
+                        "start": s,
+                        "survived": run_solo(S, s, strat, cap=cfg["cap"]),
+                    }
+                )
         pool_starts = [1] if name == "plan_mc" else list(range(1, 1 + cfg["pool_starts"]))
         for s in pool_starts:
             for rep in range(cfg["reps"]):
-                r = run_pool(S, s, strat, seed=zlib.crc32(f"{code}-{s}-{rep}".encode()), N=cfg["n"], k=cfg["k"])
+                r = run_pool(
+                    S,
+                    s,
+                    strat,
+                    seed=zlib.crc32(f"{code}-{s}-{rep}".encode()),
+                    N=cfg["n"],
+                    k=cfg["k"],
+                )
                 pool_rows.append({"season": code, "strategy": name, "start": s, "rep": rep, **r})
     return solo_rows, pool_rows
 
@@ -403,7 +473,7 @@ def load_base(first, last, cache_dir):
         if len(cur) < 370:
             print(f"! season {c} incomplete ({len(cur)} matches), skipped", file=sys.stderr)
             continue
-        prior = [frames[p] for p in codes[:codes.index(c)] if p in frames]
+        prior = [frames[p] for p in codes[: codes.index(c)] if p in frames]
         if not prior:
             print(f"! season {c} has no history, skipped", file=sys.stderr)
             continue
@@ -413,14 +483,21 @@ def load_base(first, last, cache_dir):
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--first", default="0001", help="first season to TEST (default 0001 = 2000/01)")
     ap.add_argument("--last", default="2526", help="last season to test (must be complete)")
-    ap.add_argument("--cache-dir", default="fd_cache")
+    ap.add_argument("--cache-dir", default="data/fd_cache")
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     ap.add_argument("--horizon", type=int, default=8)
-    ap.add_argument("--odds-weight", type=float, nargs="+", default=[1.0],
-                    help="weight(s) on odds vs model for the current week; several values = sweep")
+    ap.add_argument(
+        "--odds-weight",
+        type=float,
+        nargs="+",
+        default=[1.0],
+        help="weight(s) on odds vs model for the current week; several values = sweep",
+    )
     ap.add_argument("--k", type=float, default=3.0, help="opponent favourite-chasing sharpness")
     ap.add_argument("--n", type=int, default=14, help="pool size")
     ap.add_argument("--refit-every", type=int, default=6)
@@ -433,7 +510,7 @@ def main():
     ap.add_argument("--mc-top", type=int, default=4)
     ap.add_argument("--mc-sims", type=int, default=800)
     ap.add_argument("--mc-starts", type=int, default=1)
-    ap.add_argument("--out", default="backtest_runs")
+    ap.add_argument("--out", default="outputs/backtest_runs")
     args = ap.parse_args()
 
     base = load_base(args.first, args.last, args.cache_dir)
@@ -441,7 +518,11 @@ def main():
         cfg = {**vars(args), "odds_weight": w}
         jobs = [(c, h, cu, cfg) for c, h, cu in base]
         tag = f"{args.out}_w{w:g}"
-        print(f"\n##### odds_weight = {w:g}: backtesting {len(jobs)} seasons on {args.jobs} workers ...", flush=True)
+        print(
+            f"\n##### odds_weight = {w:g}: backtesting {len(jobs)} seasons "
+            f"on {args.jobs} workers ...",
+            flush=True,
+        )
         report(jobs, args, tag)
 
 
@@ -450,30 +531,51 @@ def report(jobs, args, tag):
     if args.jobs > 1:
         with ProcessPoolExecutor(args.jobs) as ex:
             for sr, pr in ex.map(process_season, jobs):
-                solo += sr; pool += pr
+                solo += sr
+                pool += pr
     else:
         for j in jobs:
-            sr, pr = process_season(j); solo += sr; pool += pr
+            sr, pr = process_season(j)
+            solo += sr
+            pool += pr
     solo, pool = pd.DataFrame(solo), pd.DataFrame(pool)
+    os.makedirs(os.path.dirname(tag) or ".", exist_ok=True)
     solo.to_csv(f"{tag}_solo.csv", index=False)
     pool.to_csv(f"{tag}_pool.csv", index=False)
 
     pd.set_option("display.width", 160)
-    print("\n=== SOLO survival (weeks until first loss, capped at %d; all start gameweeks) ===" % args.cap)
+    print(
+        f"\n=== SOLO survival (weeks until first loss, capped at {args.cap}; "
+        "all start gameweeks) ==="
+    )
     t = solo.groupby("strategy").survived.agg(
-        mean="mean", p_ge5=lambda x: (x >= 5).mean(), p_ge8=lambda x: (x >= 8).mean(),
-        p_ge_cap=lambda x: (x >= args.cap).mean(), runs="count")
-    t["se_mean"] = [solo[solo.strategy == s].groupby("season").survived.mean().std()
-                    / np.sqrt(solo[solo.strategy == s].season.nunique()) for s in t.index]
+        mean="mean",
+        p_ge5=lambda x: (x >= 5).mean(),
+        p_ge8=lambda x: (x >= 8).mean(),
+        p_ge_cap=lambda x: (x >= args.cap).mean(),
+        runs="count",
+    )
+    t["se_mean"] = [
+        solo[solo.strategy == s].groupby("season").survived.mean().std()
+        / np.sqrt(solo[solo.strategy == s].season.nunique())
+        for s in t.index
+    ]
     print(t.round(3).to_string())
 
-    print("\n=== POOL vs %d bots (k=%.1f): net profit per unit staked ===" % (args.n - 1, args.k))
+    print(f"\n=== POOL vs {args.n - 1} bots (k={args.k:.1f}): net profit per unit staked ===")
     rows = []
     for s, d in pool.groupby("strategy"):
-        rows.append({"strategy": s, "ROI": d.net.sum() / d.stake.sum(),
-                     "ROI_se": boot_se(d, "net", "stake"), "P(sole win)": d.sole_win.mean(),
-                     "resets/pool": d.resets.mean(), "weeks_first_out": d.weeks_first.mean(),
-                     "pools": len(d)})
+        rows.append(
+            {
+                "strategy": s,
+                "ROI": d.net.sum() / d.stake.sum(),
+                "ROI_se": boot_se(d, "net", "stake"),
+                "P(sole win)": d.sole_win.mean(),
+                "resets/pool": d.resets.mean(),
+                "weeks_first_out": d.weeks_first.mean(),
+                "pools": len(d),
+            }
+        )
     print(pd.DataFrame(rows).round(3).to_string(index=False))
     print(f"\nPer-run detail saved to {tag}_solo.csv / {tag}_pool.csv")
 

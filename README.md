@@ -1,39 +1,53 @@
 # data_driven_football
 
-a home for data analytics and ML related thoughts about the worlds best sport
+[![CI](https://github.com/GeorgeP2/data_driven_football/actions/workflows/ci.yml/badge.svg)](https://github.com/GeorgeP2/data_driven_football/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Data-driven tools for football prediction games.
+A home for data analytics and ML related thoughts about the world's best sport.
+Each idea lives in its own top-level folder, is reproducible and tested, and follows the same structure.
 
-## lms_project: Last Man Standing (EPL) optimiser
+## Projects
 
-Picks a team each gameweek for a Last Man Standing pool (pick a team to win, draw = out,
-no reusing teams, pool resets with a rebuy if everyone is eliminated).
+| Project | Area | Status | Highlights |
+|---------|------|--------|------------|
+| [Last Man Standing optimiser](lms_project) | Optimisation & simulation | 🚧 | Monte Carlo pot-equity picks return +0.73 to +0.98 per stake against an office-pool field, against −0.11 to −0.18 for always backing the favourite |
 
-- `fetch_data.py`: downloads results and odds from [football-data.co.uk](https://football-data.co.uk) into `results.csv` / `fixtures.csv`
-- `lms_optimiser.py`: de-vigs odds (Shin), fills later gameweeks with a Dixon-Coles model, plans a rolling horizon (Hungarian assignment) and scores picks by Monte Carlo pot equity
-- `backtest.py`: replays strategies against real EPL seasons since 2000/01
-- `tournament.py`: strategies play each other in the same pool on real EPL results and odds
-- `fd_common.py`: shared football-data.co.uk helpers (CSV loading, team-name normalisation)
-- `docs/research.md`, `docs/further-research.md`: research findings and next steps
+## Repository layout
 
-### Setup
+```
+.
+├── <idea>_project/           # one self-contained folder per football idea
+│   ├── README.md             # problem, data, approach, results
+│   ├── src/<package>/        # pipeline code, run with `python -m <package>.<module>`
+│   ├── tests/
+│   ├── docs/                 # research notes
+│   ├── reports/figures/      # committed figures used in the README
+│   ├── data/                 # git-ignored
+│   └── outputs/              # git-ignored (run results)
+├── src/football/             # shared utilities (football-data.co.uk loading, team names)
+├── tests/                    # tests for the shared package
+└── docs/                     # conventions
+```
+
+## Getting started
 
 ```bash
-python3 -m venv .venv
+git clone git@github.com:GeorgeP2/data_driven_football.git
+cd data_driven_football
+make setup            # venv + core, dev and notebook deps + pre-commit hooks
 source .venv/bin/activate
-pip install -r lms_project/requirements.txt
+make check            # lint, type-check and test everything
 ```
 
-### Usage
+### Adding a project
 
-```bash
-cd lms_project
-python lms_optimiser.py --demo                       # synthetic data
-python fetch_data.py --seasons 2526 2627 --schedule schedule.csv
-cp config.example.json config.json                   # then edit with your pool's state
-python lms_optimiser.py --results results.csv --fixtures fixtures.csv --config config.json
-python backtest.py --first 1415 --last 2425 --jobs 4
-python tournament.py
-```
+Create a new top-level folder named `<idea>_project/` with the same layout as
+[`lms_project/`](lms_project), give its package under `src/` a unique name, and add a row to the
+table above. See [docs/conventions.md](docs/conventions.md) for the house rules.
 
-Downloaded CSVs, `fd_cache/` and your `config.json` are git-ignored.
+## How this was built
+
+I build these projects with an AI coding assistant ([Claude Code](https://claude.com/claude-code));
+some commits list it as a co-author. I choose the problems, set the scope and make the design
+calls. The assistant speeds up implementation, and I review, test and can explain every change.

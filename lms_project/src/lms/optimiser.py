@@ -18,12 +18,13 @@ Inputs (CSV / JSON, see --help and the README block at the bottom)
   config.json   pool settings, your used teams, opponents' used teams
 
 Usage
-  python lms_optimiser.py --results results.csv --fixtures fixtures.csv --config config.json
-  python lms_optimiser.py --demo        # runs on synthetic data to show the output
+  python -m lms.optimiser --results data/results.csv --fixtures data/fixtures.csv \
+      --config config.json
+  python -m lms.optimiser --demo        # runs on synthetic data to show the output
 """
+
 import argparse
 import json
-import sys
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -78,17 +79,17 @@ class DixonColes:
         self.teams = sorted(set(df.home) | set(df.away))
         idx = {t: i for i, t in enumerate(self.teams)}
         n = len(self.teams)
-        h = df.home.map(idx).values
-        a = df.away.map(idx).values
-        hg = df.hg.values.astype(int)
-        ag = df.ag.values.astype(int)
-        days = (df.date.max() - df.date).dt.days.values
+        h = df.home.map(idx).to_numpy()
+        a = df.away.map(idx).to_numpy()
+        hg = df.hg.to_numpy().astype(int)
+        ag = df.ag.to_numpy().astype(int)
+        days = (df.date.max() - df.date).dt.days.to_numpy()
         w = np.exp(-self.xi * days)
         lg = gammaln(hg + 1) + gammaln(ag + 1)  # precomputed: much faster than poisson.logpmf
 
         def nll(params):
             att = params[:n]
-            dfn = params[n:2 * n]
+            dfn = params[n : 2 * n]
             ha, rho = params[2 * n], params[2 * n + 1]
             lam = np.exp(att[h] + dfn[a] + ha)
             mu = np.exp(att[a] + dfn[h])
@@ -99,11 +100,10 @@ class DixonColes:
 
         x0 = np.concatenate([np.zeros(n), np.zeros(n), [0.25, -0.05]])
         bounds = [(None, None)] * (2 * n) + [(0.0, 0.8), (-0.3, 0.3)]
-        res = minimize(nll, x0, method="L-BFGS-B", bounds=bounds,
-                       options={"maxiter": 500})
+        res = minimize(nll, x0, method="L-BFGS-B", bounds=bounds, options={"maxiter": 500})
         p = res.x
-        self.att = dict(zip(self.teams, p[:n]))
-        self.dfn = dict(zip(self.teams, p[n:2 * n]))
+        self.att = dict(zip(self.teams, p[:n], strict=True))
+        self.dfn = dict(zip(self.teams, p[n : 2 * n], strict=True))
         self.ha, self.rho = p[2 * n], p[2 * n + 1]
 
         # Prior for teams without history (promoted): the average of the 6 weakest teams in the
@@ -143,8 +143,9 @@ def build_fixture_probs(fixtures: pd.DataFrame, model: DixonColes, odds_weight=1
     rows = []
     for r in fixtures.itertuples(index=False):
         pm = model.predict(r.home, r.away)
-        has_odds = all(hasattr(r, c) and pd.notna(getattr(r, c))
-                       for c in ("odds_h", "odds_d", "odds_a"))
+        has_odds = all(
+            hasattr(r, c) and pd.notna(getattr(r, c)) for c in ("odds_h", "odds_d", "odds_a")
+        )
         if has_odds:
             po = shin_devig([r.odds_h, r.odds_d, r.odds_a])
             p = odds_weight * po + (1 - odds_weight) * pm
@@ -198,10 +199,10 @@ class Pool:
     n_players: int = 14
     stake: float = 1.0
     rebuy: float = 1.0
-    pot: float = None          # defaults to n_players * stake (rolled-over pots: set it)
-    skill_edge: float = 1.0    # 1.0 = average player; >1 if you think you're better
-    opp_sharpness: float = 3.0 # k in P(win)^k opponent pick weighting
-    n_alive: int = None        # opponents + you currently alive (default: all)
+    pot: float = None  # defaults to n_players * stake (rolled-over pots: set it)
+    skill_edge: float = 1.0  # 1.0 = average player; >1 if you think you're better
+    opp_sharpness: float = 3.0  # k in P(win)^k opponent pick weighting
+    n_alive: int = None  # opponents + you currently alive (default: all)
     me_used: list = field(default_factory=list)
     opp_used: dict = field(default_factory=dict)  # name -> list of used teams (alive opps only)
 
@@ -299,9 +300,7 @@ def simulate_candidate(fp, gws, teams, P, plan, pool: Pool, n_sims=4000, draws=N
     n_alive_end = alive_opp.sum(axis=1) + me_alive
     split_share = np.where(unresolved & me_alive, 1.0 / np.maximum(n_alive_end, 1), 0.0)
 
-    ev = (outcome_sole * pool.pot
-          + outcome_reset * pool.v_reset
-          + split_share * pool.pot).mean()
+    ev = (outcome_sole * pool.pot + outcome_reset * pool.v_reset + split_share * pool.pot).mean()
     return {
         "ev": ev,
         "p_sole": outcome_sole.mean(),
@@ -320,7 +319,6 @@ def recommend(model, fixtures, pool: Pool, horizon=8, top_n=6, n_sims=4000, odds
     teams = sorted(set(fp.home) | set(fp.away))
     P = win_matrix(fp, gws, teams)
 
-    tix = {t: i for i, t in enumerate(teams)}
     avail = np.array([t not in pool.me_used for t in teams])
 
     # shortlist: best by plan survival
@@ -337,15 +335,17 @@ def recommend(model, fixtures, pool: Pool, horizon=8, top_n=6, n_sims=4000, odds
     rows = []
     for t, plan, surv in cands:
         stats = simulate_candidate(fp, gws, teams, P, plan, pool, n_sims, draws=draws)
-        rows.append({
-            "pick": teams[t],
-            "P(win) now": P[0, t],
-            "plan survival": surv,
-            "P(sole)": stats["p_sole"],
-            "P(reset)": stats["p_reset"],
-            "EV (stakes)": stats["ev"],
-            "plan": " > ".join(teams[i] for i in plan[:5]),
-        })
+        rows.append(
+            {
+                "pick": teams[t],
+                "P(win) now": P[0, t],
+                "plan survival": surv,
+                "P(sole)": stats["p_sole"],
+                "P(reset)": stats["p_reset"],
+                "EV (stakes)": stats["ev"],
+                "plan": " > ".join(teams[i] for i in plan[:5]),
+            }
+        )
     out = pd.DataFrame(rows).sort_values("EV (stakes)", ascending=False)
     return out, fp
 
@@ -365,8 +365,15 @@ def demo_data():
         h, a = RNG.choice(20, 2, replace=False)
         lam = np.exp(0.25 + strength[h] - 0.5 * strength[a] + 0.1)
         mu = np.exp(strength[a] - 0.5 * strength[h] - 0.1)
-        rows.append((pd.Timestamp("2025-08-01") + pd.Timedelta(days=d // 2),
-                     teams[h], teams[a], RNG.poisson(lam), RNG.poisson(mu)))
+        rows.append(
+            (
+                pd.Timestamp("2025-08-01") + pd.Timedelta(days=d // 2),
+                teams[h],
+                teams[a],
+                RNG.poisson(lam),
+                RNG.poisson(mu),
+            )
+        )
     results = pd.DataFrame(rows, columns=["date", "home", "away", "hg", "ag"])
     fx = []
     for gw in range(1, 11):
@@ -380,14 +387,20 @@ def demo_data():
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--results")
     ap.add_argument("--fixtures")
     ap.add_argument("--config")
     ap.add_argument("--horizon", type=int, default=8)
     ap.add_argument("--sims", type=int, default=4000)
-    ap.add_argument("--odds-weight", type=float, default=1.0,
-                    help="weight on de-vigged odds vs Dixon-Coles for fixtures that have odds (0-1)")
+    ap.add_argument(
+        "--odds-weight",
+        type=float,
+        default=1.0,
+        help="weight on de-vigged odds vs Dixon-Coles for fixtures that have odds (0-1)",
+    )
     ap.add_argument("--demo", action="store_true")
     args = ap.parse_args()
 
@@ -402,12 +415,15 @@ def main():
         pool, _ = load_config(args.config)
 
     model = DixonColes().fit(results)
-    out, fp = recommend(model, fixtures, pool, horizon=args.horizon, n_sims=args.sims,
-                        odds_weight=args.odds_weight)
+    out, _ = recommend(
+        model, fixtures, pool, horizon=args.horizon, n_sims=args.sims, odds_weight=args.odds_weight
+    )
 
     pd.set_option("display.width", 200, "display.max_colwidth", 80)
-    print(f"\nPool: {pool.n_alive} alive of {pool.n_players} | pot={pool.pot:.1f} | "
-          f"V_reset={pool.v_reset:.2f} stakes | opp sharpness k={pool.opp_sharpness}\n")
+    print(
+        f"\nPool: {pool.n_alive} alive of {pool.n_players} | pot={pool.pot:.1f} | "
+        f"V_reset={pool.v_reset:.2f} stakes | opp sharpness k={pool.opp_sharpness}\n"
+    )
     print(out.to_string(index=False, float_format=lambda x: f"{x:.3f}"))
     best = out.iloc[0]
     print(f"\n>>> Recommended pick: {best['pick']}  (EV {best['EV (stakes)']:.2f} stakes)")

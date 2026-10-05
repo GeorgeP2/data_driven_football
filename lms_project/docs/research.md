@@ -1,6 +1,6 @@
 # Winning a Premier League Last Man Standing pool
 
-*Research notes, 5 October 2026. Code is in the parent `lms_project/` folder; all results are
+*Research notes, 5 October 2026. Code is in `lms_project/src/lms/`; all results are
 reproducible (fixed seeds). Next steps: [further-research.md](further-research.md).*
 
 ## Summary
@@ -70,7 +70,7 @@ Data issues found and fixed:
   | average of 9 weakest teams | 0.975 |
   | bookmaker odds (reference) | 0.960 |
 
-**Strategies.** Names below are as used in `tournament.py`.
+**Strategies.** Names below are as used in `lms.tournament`.
 
 | Name | Rule |
 |---|---|
@@ -91,7 +91,7 @@ rebuys after resets). Standard errors are bootstrapped over seasons.
 
 ## 4. Results
 
-### 4.1 Survival alone, and against bots (`backtest.py`)
+### 4.1 Survival alone, and against bots (`lms.backtest`)
 
 Planning horizon sweep, 2002/03–2025/26 (24 seasons). Solo = weeks until first loss.
 Pool = one strategy against 13 `crowd_k3` bots, 960 pools.
@@ -115,7 +115,7 @@ model.
 maximises "survive all 8 weeks" is optimising an event that almost never happens. It pays for it by
 taking a lower win probability now.
 
-### 4.2 Tournament: strategies play each other (`tournament.py`)
+### 4.2 Tournament: strategies play each other (`lms.tournament`)
 
 Each season × start gameweek (1–30) is one pool, 2002/03–2025/26.
 
@@ -181,7 +181,7 @@ nearly-as-strong alternative exists.
 
 ## 5. Recommended strategy
 
-Use `lms_optimiser.py` each week with `--horizon 4` and `"opp_sharpness": 5` in `config.json`.
+Use `lms.optimiser` each week with `--horizon 4` and `"opp_sharpness": 5` in `config.json`.
 Enter every rival's used teams and refresh the odds close to the deadline.
 
 Rules of thumb without the tool:
@@ -242,24 +242,25 @@ The detailed plan is in [further-research.md](further-research.md). In priority 
 
 ## 9. Reproducing
 
-Run from the `lms_project/` folder:
+Set up once from the repo root with `make setup`, then run from the `lms_project/` folder with the
+venv active:
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-# football-data CSVs are cached in fd_cache/ (download with curl if Python's SSL certificates are missing)
-.venv/bin/python backtest.py --first 0203 --last 2526 --horizon 4 --mc             # section 4.1
-.venv/bin/python tournament.py                                                      # format A
-.venv/bin/python tournament.py --entrants random greedy greedy_w0.5 greedy_eps0.03_h4 greedy_eps0.08_h4 \
-    plan_h2 plan_h4 plan_h8 mc_h2_k3 mc_h4_k1.5 mc_h4_k3 mc_h4_k5 \
+# football-data CSVs are cached in data/fd_cache/ (download with curl if Python's SSL certificates are missing)
+PYTHONPATH=src python -m lms.backtest --first 0203 --last 2526 --horizon 4 --mc     # section 4.1
+PYTHONPATH=src python -m lms.tournament                                              # format A
+PYTHONPATH=src python -m lms.tournament --entrants random greedy greedy_w0.5 greedy_eps0.03_h4 \
+    greedy_eps0.08_h4 plan_h2 plan_h4 plan_h8 mc_h2_k3 mc_h4_k1.5 mc_h4_k3 mc_h4_k5 \
     --field crowd_k1.5 crowd_k1.5 crowd_k1.5 crowd_k3 crowd_k3 crowd_k3 crowd_k3 crowd_k3 crowd_k3 crowd_k3 \
-    --pool-size 4 --lineups 10                                                      # format B
-.venv/bin/python lms_optimiser.py --results results.csv --fixtures fixtures.csv --config config.json --horizon 4
+    --pool-size 4 --lineups 10                                                       # format B
+PYTHONPATH=src python -m lms.optimiser --results data/results.csv --fixtures data/fixtures.csv \
+    --config config.json --horizon 4
 ```
 
-| File | Purpose |
+| Module | Purpose |
 |---|---|
-| `fetch_data.py` | results, fixtures and odds from football-data (+ a schedule CSV) |
-| `lms_optimiser.py` | weekly pick recommender |
-| `backtest.py` | solo and pool-versus-bots replay |
-| `tournament.py` | strategies against each other |
-| `fd_common.py` | team names and CSV reading |
+| `lms.fetch_data` | results, fixtures and odds from football-data (+ a schedule CSV) |
+| `lms.optimiser` | weekly pick recommender |
+| `lms.backtest` | solo and pool-versus-bots replay |
+| `lms.tournament` | strategies against each other |
+| `football.football_data` (repo root `src/`) | team names and CSV reading |

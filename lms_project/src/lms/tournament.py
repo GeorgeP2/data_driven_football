@@ -21,34 +21,46 @@ Entrants are named by config, so you can field several versions of each strategy
                          players pick ~ P(win)^k   (backtest.py's plan_mc)
 
 Usage
-  python tournament.py                                    # default 14-entrant field, 2002/03-2025/26
-  python tournament.py --entrants greedy plan_h2 plan_h4 mc_h4_k3 crowd_k3 crowd_k3 crowd_k3
-  python tournament.py --pool-size 8 --lineups 5          # random 8-player lineups from the roster
-  python tournament.py --field crowd_k1.5 crowd_k1.5 crowd_k1.5 crowd_k3 crowd_k3 crowd_k3 \
-      crowd_k3 crowd_k3 crowd_k3 crowd_k3 --pool-size 4      # 10 colleague-like seats + 4 contestants
+  python -m lms.tournament    # default 14-entrant field, 2002/03-2025/26
+  python -m lms.tournament --entrants greedy plan_h2 plan_h4 mc_h4_k3 crowd_k3 crowd_k3 crowd_k3
+  python -m lms.tournament --pool-size 8 --lineups 5    # random 8-player lineups from the roster
+  python -m lms.tournament --field crowd_k1.5 crowd_k1.5 crowd_k1.5 crowd_k3 crowd_k3 crowd_k3 \
+      crowd_k3 crowd_k3 crowd_k3 crowd_k3 --pool-size 4
+      # 10 colleague-like seats + 4 contestants
 
 Results depend heavily on the field: near-identical entrants (e.g. several favourite-backers)
 survive and die together, so none of them becomes the sole survivor.
 """
+
 import argparse
 import os
 import re
 import sys
 import zlib
+from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import Callable
 
 import numpy as np
 import pandas as pd
 
-import backtest as B
+from lms import backtest as B
 
 DEFAULT_ROSTER = [
-    "random", "crowd_k1.5", "crowd_k3",
-    "greedy", "greedy_w0.5", "greedy_eps0.03_h4", "greedy_eps0.08_h4",
-    "plan_h2", "plan_h4", "plan_h8",
-    "mc_h2_k3", "mc_h4_k1.5", "mc_h4_k3", "mc_h4_k5",
+    "random",
+    "crowd_k1.5",
+    "crowd_k3",
+    "greedy",
+    "greedy_w0.5",
+    "greedy_eps0.03_h4",
+    "greedy_eps0.08_h4",
+    "plan_h2",
+    "plan_h4",
+    "plan_h8",
+    "mc_h2_k3",
+    "mc_h4_k1.5",
+    "mc_h4_k3",
+    "mc_h4_k5",
 ]
 
 
@@ -78,6 +90,7 @@ def make_greedy_eps(eps, H):
         near = np.flatnonzero(p0 >= p0.max() - eps)
         future = P[1:, near].max(axis=0) if P.shape[0] > 1 else np.zeros(len(near))
         return int(near[np.argmin(future)])
+
     return f
 
 
@@ -96,6 +109,7 @@ def make_fav(p_skip, k=0.0):
             return fav
         wts = np.power(p[others], k)
         return int(rng.choice(others, p=wts / wts.sum()))
+
     return f
 
 
@@ -140,8 +154,13 @@ def run_pool(seasons, entrants, start, seed):
         picks = {}
         for i in np.flatnonzero(alive):
             others = np.arange(n) != i
-            state = {"rng_me": rngs[i], "N": n, "pot": pot,
-                     "alive_opp": alive[others], "used_opp": used[others]}
+            state = {
+                "rng_me": rngs[i],
+                "N": n,
+                "pot": pot,
+                "alive_opp": alive[others],
+                "used_opp": used[others],
+            }
             e = entrants[i]
             picks[i] = e.fn(seasons[e.w], g, set(np.flatnonzero(used[i])), state)
         for i, t in picks.items():  # simultaneous: apply after everyone has picked
@@ -171,9 +190,20 @@ def run_pool(seasons, entrants, start, seed):
     finish = np.where(alive, S0.G + 1.0, out_week)
     if winner is not None:
         finish[winner] = S0.G + 2.0
-    return [{"seat": i, "entrant": entrants[i].name, "net": payout[i] - stake[i], "stake": stake[i],
-             "sole_win": i == winner, "share": payout[i] / pot, "finish": finish[i],
-             "resets": resets, "weeks_won": weeks_won[i]} for i in range(n)]
+    return [
+        {
+            "seat": i,
+            "entrant": entrants[i].name,
+            "net": payout[i] - stake[i],
+            "stake": stake[i],
+            "sole_win": i == winner,
+            "share": payout[i] / pot,
+            "finish": finish[i],
+            "resets": resets,
+            "weeks_won": weeks_won[i],
+        }
+        for i in range(n)
+    ]
 
 
 # --------------------------------------------------------------------------- #
@@ -184,7 +214,9 @@ def process_season(job):
     roster = [parse_entrant(nm, cfg["mc_top"], cfg["mc_sims"]) for nm in cfg["entrants"]]
     field = [parse_entrant(nm, cfg["mc_top"], cfg["mc_sims"]) for nm in cfg["field"]]
     weights = sorted({e.w for e in roster + field})
-    seasons = {w: B.Season(code, hist, cur, cfg["refit_every"], cfg["hist_matches"], w) for w in weights}
+    seasons = {
+        w: B.Season(code, hist, cur, cfg["refit_every"], cfg["hist_matches"], w) for w in weights
+    }
     G = next(iter(seasons.values())).G
     rows = []
     for start in range(1, min(cfg["max_start"], G - 4) + 1):
@@ -194,9 +226,19 @@ def process_season(job):
             if cfg["pool_size"] >= len(roster):
                 seats = list(range(len(roster)))
             else:
-                seats = sorted(np.random.default_rng(seed).choice(len(roster), cfg["pool_size"], replace=False))
+                seats = sorted(
+                    np.random.default_rng(seed).choice(len(roster), cfg["pool_size"], replace=False)
+                )
             for r in run_pool(seasons, field + [roster[s] for s in seats], start, seed):
-                rows.append({"season": code, "start": start, "lineup": lu, "pool": f"{code}-{start}-{lu}", **r})
+                rows.append(
+                    {
+                        "season": code,
+                        "start": start,
+                        "lineup": lu,
+                        "pool": f"{code}-{start}-{lu}",
+                        **r,
+                    }
+                )
     return rows
 
 
@@ -206,10 +248,17 @@ def process_season(job):
 def leaderboard(df):
     rows = []
     for name, d in df.groupby("entrant"):
-        rows.append({"entrant": name, "ROI": d.net.sum() / d.stake.sum(),
-                     "ROI_se": B.boot_se(d, "net", "stake"),
-                     "P(sole win)": d.sole_win.mean(), "pot share": d.share.mean(),
-                     "weeks won": d.weeks_won.mean(), "pools": d["pool"].nunique()})
+        rows.append(
+            {
+                "entrant": name,
+                "ROI": d.net.sum() / d.stake.sum(),
+                "ROI_se": B.boot_se(d, "net", "stake"),
+                "P(sole win)": d.sole_win.mean(),
+                "pot share": d.share.mean(),
+                "weeks won": d.weeks_won.mean(),
+                "pools": d["pool"].nunique(),
+            }
+        )
     return pd.DataFrame(rows).sort_values("ROI", ascending=False).reset_index(drop=True)
 
 
@@ -220,8 +269,8 @@ def head_to_head(df, order):
     pos = {nm: i for i, nm in enumerate(order)}
     W, G = np.zeros((len(order), len(order))), np.zeros((len(order), len(order)))
     for _, p in df.groupby("pool"):  # seat vs seat, so duplicate entrants count once per seat
-        e = p.entrant.map(pos).values
-        v = p.finish.values
+        e = p.entrant.map(pos).to_numpy()
+        v = p.finish.to_numpy()
         cmp = (v[:, None] > v[None, :]) + 0.5 * (v[:, None] == v[None, :])
         np.add.at(W, (e[:, None], e[None, :]), cmp)
         np.add.at(G, (e[:, None], e[None, :]), 1.0)
@@ -233,23 +282,35 @@ def head_to_head(df, order):
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--entrants", nargs="+", default=DEFAULT_ROSTER)
     ap.add_argument("--first", default="0203")
     ap.add_argument("--last", default="2526")
     ap.add_argument("--max-start", type=int, default=30, help="pools start at gameweeks 1..this")
-    ap.add_argument("--field", nargs="*", default=[],
-                    help="entrants seated in every pool in addition to the sampled contestants")
-    ap.add_argument("--pool-size", type=int, default=99,
-                    help="contestant seats per pool; smaller than the roster -> random lineups")
-    ap.add_argument("--lineups", type=int, default=5, help="random lineups per start (with --pool-size)")
+    ap.add_argument(
+        "--field",
+        nargs="*",
+        default=[],
+        help="entrants seated in every pool in addition to the sampled contestants",
+    )
+    ap.add_argument(
+        "--pool-size",
+        type=int,
+        default=99,
+        help="contestant seats per pool; smaller than the roster -> random lineups",
+    )
+    ap.add_argument(
+        "--lineups", type=int, default=5, help="random lineups per start (with --pool-size)"
+    )
     ap.add_argument("--mc-top", type=int, default=4)
     ap.add_argument("--mc-sims", type=int, default=800)
     ap.add_argument("--refit-every", type=int, default=6)
     ap.add_argument("--hist-matches", type=int, default=900)
-    ap.add_argument("--cache-dir", default="fd_cache")
+    ap.add_argument("--cache-dir", default="data/fd_cache")
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1))
-    ap.add_argument("--out", default="tournament_runs.csv")
+    ap.add_argument("--out", default="outputs/tournament_runs.csv")
     args = ap.parse_args()
 
     for nm in args.entrants + args.field:  # fail fast on typos
@@ -260,8 +321,12 @@ def main():
     base = B.load_base(args.first, args.last, args.cache_dir)
     cfg = vars(args)
     jobs = [(c, h, cu, cfg) for c, h, cu in base]
-    print(f"Tournament: {len(args.entrants)} entrants, {len(jobs)} seasons, starts 1..{args.max_start}, "
-          f"{args.jobs} workers ...", flush=True)
+    print(
+        f"Tournament: {len(args.entrants)} entrants, {len(jobs)} seasons, "
+        f"starts 1..{args.max_start}, "
+        f"{args.jobs} workers ...",
+        flush=True,
+    )
     rows = []
     if args.jobs > 1:
         with ProcessPoolExecutor(args.jobs) as ex:
@@ -271,18 +336,25 @@ def main():
         for j in jobs:
             rows += process_season(j)
     df = pd.DataFrame(rows)
+    os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     df.to_csv(args.out, index=False)
 
     pd.set_option("display.width", 220, "display.max_columns", 50)
     lb = leaderboard(df)
-    print(f"\n=== LEADERBOARD ({df['pool'].nunique()} pools; ROI = net profit per unit staked, "
-          f"SE = season bootstrap) ===")
+    print(
+        f"\n=== LEADERBOARD ({df['pool'].nunique()} pools; ROI = net profit per unit staked, "
+        f"SE = season bootstrap) ==="
+    )
     print(lb.round(3).to_string(index=False))
     print(f"\nsanity: total net across all seats = {df.net.sum():.6f} (pools are zero-sum)")
 
     h = head_to_head(df, list(lb.entrant))
-    print("\n=== HEAD TO HEAD: row finished ahead of column (share of shared pools, ties = 1/2) ===")
-    short = {nm: nm.replace("greedy", "g").replace("crowd", "c").replace("_", "") for nm in h.columns}
+    print(
+        "\n=== HEAD TO HEAD: row finished ahead of column (share of shared pools, ties = 1/2) ==="
+    )
+    short = {
+        nm: nm.replace("greedy", "g").replace("crowd", "c").replace("_", "") for nm in h.columns
+    }
     print(h.rename(columns=short).round(2).to_string(na_rep="  -"))
     print(f"\nPer-seat detail saved to {args.out}")
 

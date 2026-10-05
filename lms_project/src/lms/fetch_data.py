@@ -1,31 +1,32 @@
 #!/usr/bin/env python3
 """
 Pull EPL data from football-data.co.uk and write results.csv / fixtures.csv
-in the format lms_optimiser.py expects.
+in the format lms.optimiser expects.
 
   results.csv   : date,home,away,hg,ag   (last N seasons of completed PL matches)
   fixtures.csv  : gw,home,away,odds_h,odds_d,odds_a
 
 Where things come from
   - Results + odds history:  https://football-data.co.uk/mmz4281/<SSYY>/E0.csv
-  - Upcoming fixtures + odds: https://football-data.co.uk/fixtures.csv  (next round or so only, Div == E0)
+  - Upcoming fixtures + odds: https://football-data.co.uk/fixtures.csv
+    (next round or so only, Div == E0)
   - Full-season schedule (gameweek numbers for later weeks): NOT on football-data.
     Supply it with --schedule schedule.csv (columns: gw,home,away), e.g. exported from the
     official FPL API or fixturedownload.com. Odds from football-data are merged onto it.
 
 Usage
-  python fetch_data.py --seasons 2526 2627 --schedule schedule.csv
-  python fetch_data.py --seasons 2526 2627              # odds-only fixtures; gw derived from dates
+  python -m lms.fetch_data --seasons 2526 2627 --schedule schedule.csv
+  python -m lms.fetch_data --seasons 2526 2627    # odds-only fixtures; gw derived from dates
 
 Check the printed warnings: team names must match across all sources.
 """
+
 import argparse
 import sys
 
-import numpy as np
 import pandas as pd
 
-from fd_common import canon, read_fd_csv
+from football.football_data import canon, read_fd_csv
 
 BASE = "https://football-data.co.uk"
 SEASON_URL = BASE + "/mmz4281/{s}/E0.csv"
@@ -33,6 +34,7 @@ FIXTURES_URL = BASE + "/fixtures.csv"
 
 # Odds columns in order of preference: market average, Pinnacle, Bet365.
 ODDS_SETS = [("AvgH", "AvgD", "AvgA"), ("PSH", "PSD", "PSA"), ("B365H", "B365D", "B365A")]
+
 
 def read_fd(src: str) -> pd.DataFrame:
     df = read_fd_csv(src)
@@ -50,7 +52,7 @@ def best_odds(df: pd.DataFrame) -> pd.DataFrame:
         if not all(c in df.columns for c in (h, d, a)):
             continue
         ok = out["odds_h"].isna() & df[[h, d, a]].notna().all(axis=1)
-        out.loc[ok, ["odds_h", "odds_d", "odds_a"]] = df.loc[ok, [h, d, a]].values
+        out.loc[ok, ["odds_h", "odds_d", "odds_a"]] = df.loc[ok, [h, d, a]].to_numpy()
     return out
 
 
@@ -65,13 +67,15 @@ def fetch_results(seasons):
         sys.exit("No results loaded.")
     df = pd.concat(frames, ignore_index=True)
     df = df.dropna(subset=["FTHG", "FTAG"])
-    res = pd.DataFrame({
-        "date": df["Date"].dt.strftime("%Y-%m-%d"),
-        "home": df["HomeTeam"].map(canon),
-        "away": df["AwayTeam"].map(canon),
-        "hg": df["FTHG"].astype(int),
-        "ag": df["FTAG"].astype(int),
-    })
+    res = pd.DataFrame(
+        {
+            "date": df["Date"].dt.strftime("%Y-%m-%d"),
+            "home": df["HomeTeam"].map(canon),
+            "away": df["AwayTeam"].map(canon),
+            "hg": df["FTHG"].astype(int),
+            "ag": df["FTAG"].astype(int),
+        }
+    )
     return res.sort_values("date").reset_index(drop=True)
 
 
@@ -95,17 +99,23 @@ def fetch_fixtures(schedule_path=None, start_gw=1):
         sched["away"] = sched["away"].map(canon)
         # the optimiser treats the first gw in fixtures.csv as "now": drop gameweeks already played
         sched = sched[sched["gw"] >= start_gw]
-        merged = sched.merge(fx[["home", "away", "odds_h", "odds_d", "odds_a"]],
-                             on=["home", "away"], how="left")
+        merged = sched.merge(
+            fx[["home", "away", "odds_h", "odds_d", "odds_a"]], on=["home", "away"], how="left"
+        )
         unmatched = set(fx["home"]) - set(sched["home"]) - set(sched["away"])
         if unmatched:
-            print(f"! football-data teams not found in schedule: {sorted(unmatched)}", file=sys.stderr)
+            print(
+                f"! football-data teams not found in schedule: {sorted(unmatched)}", file=sys.stderr
+            )
         return merged[["gw", "home", "away", "odds_h", "odds_d", "odds_a"]]
 
     # No schedule: gameweeks derived from dates, only covers what fixtures.csv lists.
     fx["gw"] = derive_gw(fx, start_gw)
-    print("! no --schedule given: fixtures only cover the next round(s); "
-          "later gameweeks will be missing, so the planner horizon will be short.", file=sys.stderr)
+    print(
+        "! no --schedule given: fixtures only cover the next round(s); "
+        "later gameweeks will be missing, so the planner horizon will be short.",
+        file=sys.stderr,
+    )
     return fx[["gw", "home", "away", "odds_h", "odds_d", "odds_a"]]
 
 
@@ -116,12 +126,16 @@ def season_start(today: pd.Timestamp) -> str:
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--seasons", nargs="+", default=["2526", "2627"])
     ap.add_argument("--schedule", help="CSV with gw,home,away for the rest of the season")
-    ap.add_argument("--start-gw", type=int, help="gameweek number of the first fixture in fixtures.csv")
-    ap.add_argument("--out-results", default="results.csv")
-    ap.add_argument("--out-fixtures", default="fixtures.csv")
+    ap.add_argument(
+        "--start-gw", type=int, help="gameweek number of the first fixture in fixtures.csv"
+    )
+    ap.add_argument("--out-results", default="data/results.csv")
+    ap.add_argument("--out-fixtures", default="data/fixtures.csv")
     args = ap.parse_args()
 
     res = fetch_results(args.seasons)
@@ -139,8 +153,10 @@ def main():
     known = set(res.home) | set(res.away)
     bad = (set(fx.home) | set(fx.away)) - known
     if bad:
-        print(f"! teams in fixtures but not in results (promoted? name mismatch?): {sorted(bad)}",
-              file=sys.stderr)
+        print(
+            f"! teams in fixtures but not in results (promoted? name mismatch?): {sorted(bad)}",
+            file=sys.stderr,
+        )
 
 
 if __name__ == "__main__":
