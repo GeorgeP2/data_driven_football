@@ -14,10 +14,11 @@ dependencies = [
     "numpy>=1.26",
     "pandas>=2.2",
     "scipy>=1.13",
+    "ortools==9.14.6206",
 ]
 
 [project.optional-dependencies]
-notebooks = ["jupyterlab>=4.2", "ipykernel>=6.29", "matplotlib>=3.8"]
+notebooks = ["jupyterlab>=4.2", "ipykernel>=6.29", "matplotlib>=3.8", "seaborn>=0.13"]
 dev = [
     "pytest>=8.3",
     "pytest-cov>=5.0",
