@@ -7,7 +7,8 @@ shared utilities in `src/football/`.
 
 - Keep changes to what was asked. Scaffolding and examples beyond the request aren't wanted.
 - Committed docs must not name people in the pool or other private details; `lms_project/config.json`
-  and `lms_project/conversation.md` are git-ignored for that reason.
+  and `lms_project/conversation.md` are git-ignored for that reason, as are
+  `fpl_optimiser_project/leagues.json` and `fpl_optimiser_project/commentary/`.
 
 ## Commands
 

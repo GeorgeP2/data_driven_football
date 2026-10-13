@@ -8,6 +8,9 @@ One web page per mini-league (The Boys FPL, THG Ing League), built with the same
 a rival how to catch up (required run rate, "needs X a week"). That applies to the data embedded
 in the page source as well as what's visible. Commentary describes what happened and never advises.
 
+The leagues and their members live in `leagues.json`, and the write-ups in `commentary/`. Both are
+git-ignored because they name real people: copy `leagues.example.json` to `leagues.json` to start.
+
 Weekly refresh, once the gameweek is finished:
 
 ```
@@ -41,13 +44,15 @@ first-half chip not played by GW19 shows as expired. Tests: `make check` from th
 
 `export --cached` skips the pull and reuses the `fpl_entry_*_history.csv` files in `data/`.
 
-Then publish. The pages are hosted on GitHub Pages from `site/`, which `.github/workflows/pages.yml`
-deploys on every push to `main` that touches it:
+Then publish. The pages are hosted on GitHub Pages from a separate repo, GeorgeP2/fpl-league-pages,
+so the public site never links back to this code. With it cloned next to this repo:
 
 ```
-cp outputs/league_pages/*_fpl.html site/
-git add site commentary && git commit -m "League pages: GWNN" && git push
+cp outputs/league_pages/*_fpl.html ../../fpl-league-pages/
+cd ../../fpl-league-pages && git add -A && git commit -m "League pages after GWNN" && git push
 ```
+
+`commentary/` is not in git, but every write-up is embedded in the published pages.
 
 They are also Claude artifacts. To keep those current, ask Claude to republish the two HTML files to
 the existing artifacts so the links stay the same:
@@ -55,5 +60,5 @@ the existing artifacts so the links stay the same:
 - The Boys FPL — https://claude.ai/artifact/RxGhGZqzjEyhp4dAsh5xmN
 - THG Ing League — https://claude.ai/artifact/T5C8hPe8qUqpbkwfNBZgDD
 
-Entry ids are reissued every season. Keep `LEAGUES` in `export.py` in step with the notebook's
-Parameters cell. The export fails, listing the current ids, if an entry is no longer in its league.
+Entry ids are reissued every season. Update them in `leagues.json`, which the notebook reads too.
+The export fails, listing the current ids, if an entry is no longer in its league.
