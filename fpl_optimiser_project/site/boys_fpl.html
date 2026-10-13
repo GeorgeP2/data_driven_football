@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Boys FPL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: a mown-pitch masthead with the race summary, then one column of charts read top to bottom
+   in the notebook's order — who leads, who moved, whether the gap is closable, how it finishes. */
+:root {
+  --bg: #f3f6f2; --surface: #fcfdfb; --ink: #17211b; --ink-2: #47544c; --muted: #75837a;
+  --rule: #dbe2dc; --grid: #e8ede8; --accent: #0f6b3c; --stripe-a: #e6eee6; --stripe-b: #edf3ec;
+  --seq: #2a5bd7; --neutral-line: #6b766f; --win: #1d7f4e; --loss: #c0392b;
+  --c0: #2a78d6; --c1: #eb6834; --c2: #1baf7a; --c3: #eda100; --c4: #e87ba4;
+  --c5: #008300; --c6: #8e5cd9; --c7: #a0522d; --c8: #00a3c4; --c9: #c0392b;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1511; --surface: #151d18; --ink: #e7eee9; --ink-2: #b3c0b7; --muted: #7f8e85;
+  --rule: #29342d; --grid: #1f2923; --accent: #56c48a; --stripe-a: #131b16; --stripe-b: #17211a;
+  --seq: #6f9cf0; --neutral-line: #a3aea7; --win: #4fb985; --loss: #e06a5c;
+  --c0: #3b86e0; --c1: #d0592a; --c2: #1baf7a; --c3: #b88600; --c4: #c6668f;
+  --c5: #1a9a1a; --c6: #9a6ae2; --c7: #b0623a; --c8: #00a3c4; --c9: #d04a3c;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0f1511; --surface: #151d18; --ink: #e7eee9; --ink-2: #b3c0b7; --muted: #7f8e85;
+  --rule: #29342d; --grid: #1f2923; --accent: #56c48a; --stripe-a: #131b16; --stripe-b: #17211a;
+  --seq: #6f9cf0; --neutral-line: #a3aea7; --win: #4fb985; --loss: #e06a5c;
+  --c0: #3b86e0; --c1: #d0592a; --c2: #1baf7a; --c3: #b88600; --c4: #c6668f;
+  --c5: #1a9a1a; --c6: #9a6ae2; --c7: #b0623a; --c8: #00a3c4; --c9: #d04a3c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 0 48px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+.num { font-variant-numeric: tabular-nums; }
+
+.masthead {
+  background: repeating-linear-gradient(90deg, var(--stripe-a) 0 56px, var(--stripe-b) 56px 112px);
+  border-bottom: 1px solid var(--rule);
+}
+.masthead .wrap { padding-block: 28px 24px; display: grid; gap: 14px; }
+.eyebrow { font-family: var(--font-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; font-size: 13px; color: var(--accent); }
+h1 { font-size: clamp(38px, 7vw, 60px); line-height: 0.95; text-transform: uppercase; }
+.lede { font-size: 17px; max-width: 62ch; color: var(--ink-2); margin: 0; }
+.lede b { color: var(--ink); font-weight: 600; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 4px; }
+.tile { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 14px; min-width: 0; }
+.tile .k { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.tile .v { font-family: var(--font-display); font-weight: 700; font-size: 30px; line-height: 1.1; }
+.tile .s { font-size: 13px; color: var(--ink-2); }
+
+.focusbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--rule); }
+.focusbar .wrap { padding-block: 10px; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.focusbar .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-right: 4px; }
+.chip { font: inherit; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: 999px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); cursor: pointer; }
+.chip i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.chip[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); font-weight: 600; }
+.chip:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip.clear { color: var(--muted); }
+
+section { padding-top: 36px; display: grid; gap: 10px; }
+section > header { display: grid; gap: 4px; }
+h2 { font-size: 28px; text-transform: uppercase; }
+.sub { color: var(--ink-2); margin: 0; max-width: 68ch; }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 14px 10px; position: relative; min-width: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid; }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--grid); }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; border-bottom-color: var(--rule); vertical-align: bottom; }
+th:first-child, td:first-child, th.l, td.l { text-align: left; }
+td.mgr { display: flex; align-items: center; gap: 8px; }
+td.mgr i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+td.mgr small { color: var(--muted); font-size: 12px; }
+td.pos { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--muted); }
+tr.dim td { opacity: 0.35; }
+tr.hl td { background: color-mix(in srgb, var(--seq) 8%, transparent); }
+.bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--ink-2); vertical-align: middle; margin-left: 8px; }
+.up { color: var(--accent); } .down { color: var(--c9); }
+
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--muted); font-family: var(--font-body); font-size: 12px; }
+svg .axis-title { fill: var(--ink-2); }
+svg .gridline { stroke: var(--grid); stroke-width: 1; }
+svg .zero { stroke: var(--neutral-line); stroke-width: 1; }
+svg .series { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; transition: opacity .15s; }
+svg .dot { stroke: var(--surface); stroke-width: 2; }
+svg .dimmed { opacity: 0.15; }
+svg .xhair { stroke: var(--neutral-line); stroke-dasharray: 3 3; }
+
+.tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); border-radius: 6px; padding: 8px 10px; font-size: 13px; box-shadow: 0 4px 16px rgb(0 0 0 / 0.12); min-width: 150px; z-index: 3; }
+.tip h4 { margin: 0 0 4px; font-family: var(--font-display); font-size: 15px; text-transform: uppercase; letter-spacing: 0.04em; }
+.tip .row { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+.tip .row span:first-child { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+.tip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+
+.heat td.cell { text-align: center; min-width: 46px; font-size: 13px; }
+.notes { color: var(--ink-2); font-size: 14px; max-width: 70ch; }
+.notes p { margin: 0 0 10px; }
+footer { color: var(--muted); font-size: 13px; padding-top: 32px; }
+.gwtabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.gwtab { font: inherit; font-family: var(--font-display); font-weight: 600; font-size: 16px; letter-spacing: 0.04em; padding: 4px 12px; border-radius: 6px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.gwtab[aria-selected="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.commentary { font-size: 16px; max-width: 68ch; display: grid; gap: 8px; }
+.commentary p { margin: 0; }
+.commentary b { font-weight: 600; }
+.gwtable td.mgr { display: table-cell; white-space: nowrap; }
+.gwtable td.mgr i { display: inline-block; margin-right: 8px; }
+.gwtable td { vertical-align: top; white-space: normal; text-align: left; }
+.gwtable th { text-align: left; }
+.gwtable td.score { text-align: right; white-space: nowrap; font-family: var(--font-display); font-weight: 700; font-size: 18px; }
+.gwtable td.score small { display: block; font-family: var(--font-body); font-weight: 500; font-size: 12px; color: var(--c9); }
+.gwtable .pl { white-space: nowrap; }
+.gwtable .pts { color: var(--muted); font-variant-numeric: tabular-nums; }
+.gwtable .note { color: var(--muted); font-size: 12px; }
+.gwtable .moves { display: grid; gap: 2px; min-width: 210px; }
+.gwtable .net { font-weight: 600; font-variant-numeric: tabular-nums; }
+.gwtable details summary { cursor: pointer; color: var(--ink-2); font-size: 13px; }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--ink-2); color: var(--ink); margin-left: 6px; white-space: nowrap; }
+.chipset { display: flex; flex-wrap: wrap; gap: 4px; }
+.chiptag { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--ink-2); color: var(--ink); white-space: nowrap; }
+.chiptag.used { border-style: dashed; color: var(--muted); border-color: var(--rule); text-decoration: line-through; }
+.chiptag.expired { color: var(--muted); border-color: var(--rule); opacity: 0.6; }
+.toggle { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.toggle button { font: inherit; font-size: 13px; padding: 4px 12px; border: 0; background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.toggle button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.gaprows { display: grid; gap: 14px; }
+.gaprow { display: grid; grid-template-columns: 84px minmax(0, 1fr) 52px; gap: 4px 10px; align-items: center; }
+.gaprow .who { display: flex; align-items: center; gap: 6px; font-weight: 500; }
+.gaprow .who i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.gaprow .track { position: relative; height: 18px; background: var(--grid); border-radius: 3px; }
+.gaprow .track .axis { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--neutral-line); }
+.gaprow .seg { position: absolute; top: 2px; bottom: 2px; border-radius: 2px; }
+.gaprow .total { font-family: var(--font-display); font-weight: 700; font-size: 18px; text-align: right; font-variant-numeric: tabular-nums; }
+.gaprow .diffs { grid-column: 2 / 4; font-size: 12px; color: var(--muted); min-width: 0; }
+.gaprow.dim { opacity: 0.35; }
+.swatch { display: inline-block; width: 12px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 5px; }
+.heatcell { text-align: center !important; font-variant-numeric: tabular-nums; min-width: 58px; }
+.heatcell small { display: block; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; }
+.h2h td, .h2h th { text-align: center; padding: 6px 8px; }
+.h2h td.mgr, .h2h th:first-child { text-align: left; }
+.h2h td.self { color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="masthead"><div class="wrap">
+  <div class="eyebrow" id="eyebrow"></div>
+  <h1 id="h1"></h1>
+  <p class="lede" id="lede"></p>
+  <div class="tiles" id="tiles"></div>
+</div></div>
+
+<div class="focusbar" aria-label="Highlight a manager"><div class="wrap" id="focusbar"><span class="lbl">Highlight</span></div></div>
+
+<div class="wrap">
+  <section id="table-sec">
+    <header><h2>Table</h2><p class="sub" id="table-sub">Points from the FPL API. Win chances come from 10,000 simulated finishes to GW38.</p></header>
+    <div class="panel tablewrap"><table id="standings"></table></div>
+  </section>
+
+  <section id="gameweeks">
+    <header><h2>Gameweek by gameweek</h2><p class="sub">What happened each week: the top scorer in every XI (captain points included), the armband, transfers as players out → in with that week's points, and anyone left on the bench who beat a starter in the same role by 2 or more.</p></header>
+    <div class="gwtabs" role="tablist" id="gwtabs"></div>
+    <div class="commentary" id="commentary"></div>
+    <div class="panel tablewrap"><table class="gwtable" id="gwtable"></table></div>
+  </section>
+
+  <section id="transfers">
+    <header><h2>Transfers so far</h2><p class="sub">Each signing is scored from the week it arrived until it was sold again, against what the player sold scored over the same weeks. Raw player points: captaincy and bench weeks are not separated. Free-hit signings count for their one week. Wildcard and free-hit squads are shown apart, because who replaced whom inside a chip week is matched by position, not chosen.</p></header>
+    <div class="panel tablewrap"><table class="gwtable" id="season-transfers"></table></div>
+  </section>
+
+  <section id="captaincy">
+    <header><h2>Captaincy and chips</h2><p class="sub">Captain points so far, against the average of everyone else's captains each week ("vs rivals") and against the best captain available from that week's XI. The best available is hindsight, and it is often a defender nobody would have captained. Chips come twice this season: one set to use by GW19 and a second for GW20–38. Struck-through chips are played.</p></header>
+    <div class="panel tablewrap"><table class="gwtable" id="captaincy-table"></table></div>
+    <p class="sub">Week by week: each manager's captain and the points it returned. Green beat that week's average of the other managers' captains, red fell short. The top row is the league's most-picked captain.</p>
+    <div class="panel tablewrap"><table class="gwtable" id="captaincy-weeks"></table></div>
+  </section>
+
+  <section id="gap">
+    <header><h2>Gap to the leader</h2><p class="sub" id="gap-sub"></p></header>
+    <div style="display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center">
+      <div class="toggle" role="group" aria-label="Period"><button type="button" id="gap-season" aria-pressed="true">Season</button><button type="button" id="gap-recent" aria-pressed="false">Last 5 GWs</button></div>
+      <div class="legend" style="margin:0"><span><span class="swatch" style="background:var(--ink-2)"></span>players the other doesn't own</span><span><span class="swatch" style="background:var(--seq)"></span>captaincy</span><span><span class="swatch" style="background:var(--loss)"></span>hits</span></div>
+    </div>
+    <div class="panel"><div class="gaprows" id="gaprows"></div></div>
+  </section>
+
+  <section id="outlook">
+    <header><h2>Next five gameweeks</h2><p class="sub" id="outlook-sub"></p></header>
+    <div class="panel tablewrap"><table class="gwtable" id="outlook-table"></table></div>
+  </section>
+
+  <section id="bench">
+    <header><h2>Bench and auto-subs</h2><p class="sub">Points left on the bench all season (bench boost weeks excluded), and points that came on through automatic substitutions.</p></header>
+    <div class="panel tablewrap"><table class="gwtable" id="bench-table"></table></div>
+  </section>
+
+  <section id="h2h">
+    <header><h2>Head to head</h2><p class="sub">Weeks each manager (row) outscored each rival (column), as wins–losses after hits. Draws count in the total.</p></header>
+    <div class="panel tablewrap"><table class="h2h" id="h2h-table"></table></div>
+  </section>
+
+  <section>
+    <header><h2>Chance of winning the league</h2><p class="sub">Re-simulated after every gameweek using only what was known then. Early weeks are wide open by design: a week's score varies by about 16 points either way.</p></header>
+    <div class="panel"><div class="legend" data-legend></div><div id="ch-win"></div></div>
+  </section>
+
+  <section>
+    <header><h2>Who moved the needle</h2><p class="sub">Week-on-week change in win chance. Gains stack above zero, losses below. Changes smaller than the simulation noise (Welch t-test, p&nbsp;&gt;&nbsp;0.05) are set to zero, so every bar is a real shift.</p></header>
+    <div class="panel"><div class="legend" data-legend></div><div id="ch-delta"></div></div>
+  </section>
+
+  <section>
+    <header><h2>Points behind the leader</h2><p class="sub">Distance to whoever was top that week. Zero is the leader.</p></header>
+    <div class="panel"><div class="legend" data-legend></div><div id="ch-behind"></div></div>
+  </section>
+
+  <section>
+    <header><h2>Gameweek scores</h2><p class="sub">Points each week before transfer hits, as FPL shows them. Hits come off the season total.</p></header>
+    <div class="panel"><div class="legend" data-legend></div><div id="ch-weekly"></div></div>
+  </section>
+
+
+  <section>
+    <header><h2>Where everyone finishes</h2><p class="sub">Share of 10,000 simulated seasons that end with each manager in each position. This is a separate run from the win-chance chart, so first-place figures can differ from it by about a point.</p></header>
+    <div class="panel tablewrap"><table class="heat" id="heat"></table></div>
+  </section>
+
+  <section class="notes">
+    <header><h2>How the numbers are made</h2></header>
+    <p>Each manager's weekly rate is their running average, pulled toward the league average with a prior worth a few gameweeks of evidence, and drawn each simulation with its standard error. Weekly scores are drawn from a normal distribution with a spread of 16 points, which is last season's within-manager variation. A Poisson model would give a spread of about 7.5 at 55 points and call early leads near-certain.</p>
+    <p>The form-adjusted chance in the table runs the same simulation on the exponentially weighted recent average instead of the season average. Where the two disagree, a manager's level has changed and the season average has not caught up.</p>
+    <p id="provisional"></p>
+  </section>
+  <footer id="footer"></footer>
+</div>
+
+<script>
+const DATA = {"league": "boys", "league_id": 76315, "gws": [1, 2, 3, 4, 5, 6], "win_gws": [1, 2, 3, 4, 5, 6], "names": ["george", "mark", "andy", "chris", "david"], "n_iter": 10000, "managers": {"george": {"points": [46, 108, 43, 81, 27, 50], "total": [46, 154, 197, 278, 305, 355], "bench": [1, 0, 0, 0, 8, 3], "behind": [23, 0, 0, 0, 1, 11], "ewma": [46.0, 66.7, 58.8, 66.2, 53.1, 52.1], "mean": [46.0, 77.0, 65.7, 69.5, 61.0, 59.2], "transfers": [0, 0, 2, 1, 1, 1], "hits": [0, 0, 0, 0, 0, 0], "overall_rank": [5572584, 1568336, 2700348, 2118566, 4028622, 4797371], "win": [0.143, 0.387, 0.373, 0.378, 0.263, 0.199], "win_form": [0.143, 0.293, 0.293, 0.301, 0.154, 0.102], "delta": [0.243, 0.0, 0.0, -0.115, -0.065], "delta_gws": [2, 3, 4, 5, 6], "rank_prob": {"1": 0.202, "2": 0.212, "3": 0.214, "4": 0.199, "5": 0.173}}, "mark": {"points": [58, 58, 32, 82, 52, 68], "total": [58, 116, 148, 230, 282, 350], "bench": [0, 10, 3, 3, 4, 9], "behind": [11, 38, 49, 48, 24, 16], "ewma": [58.0, 58.0, 49.3, 60.2, 57.5, 61.0], "mean": [58.0, 58.0, 49.3, 57.5, 56.4, 58.3], "transfers": [0, 1, 1, 0, 1, 0], "hits": [0, 0, 0, 0, 0, 0], "overall_rank": [2201654, 6529269, 8027856, 6507301, 6084680, 5149819], "win": [0.229, 0.119, 0.081, 0.089, 0.127, 0.18], "win_form": [0.229, 0.152, 0.103, 0.117, 0.201, 0.273], "delta": [-0.11, -0.038, 0.008, 0.038, 0.053], "delta_gws": [2, 3, 4, 5, 6], "rank_prob": {"1": 0.175, "2": 0.193, "3": 0.206, "4": 0.222, "5": 0.204}}, "andy": {"points": [38, 80, 51, 90, 47, 60], "total": [38, 118, 169, 259, 306, 366], "bench": [2, 4, 9, 3, 2, 19], "behind": [31, 36, 28, 19, 0, 0], "ewma": [38.0, 52.0, 51.7, 64.4, 58.6, 59.1], "mean": [38.0, 59.0, 56.3, 64.8, 61.2, 61.0], "transfers": [0, 0, 1, 1, 0, 2], "hits": [0, 0, 0, 0, 0, 0], "overall_rank": [7485068, 6221425, 6197445, 3816159, 3901125, 3935383], "win": [0.109, 0.126, 0.165, 0.225, 0.282, 0.275], "win_form": [0.109, 0.106, 0.145, 0.225, 0.288, 0.245], "delta": [0.016, 0.04, 0.059, 0.057, 0.0], "delta_gws": [2, 3, 4, 5, 6], "rank_prob": {"1": 0.274, "2": 0.232, "3": 0.2, "4": 0.164, "5": 0.13}}, "chris": {"points": [69, 62, 39, 80, 37, 40], "total": [69, 131, 170, 250, 287, 327], "bench": [1, 7, 11, 8, 20, 15], "behind": [0, 23, 27, 28, 19, 39], "ewma": [69.0, 66.7, 57.4, 65.0, 55.6, 50.4], "mean": [69.0, 65.5, 56.7, 62.5, 57.4, 54.5], "transfers": [0, 1, 0, 0, 1, 0], "hits": [0, 0, 0, 0, 0, 0], "overall_rank": [607076, 4538858, 6084281, 4683521, 5646829, 6755639], "win": [0.311, 0.204, 0.171, 0.169, 0.158, 0.081], "win_form": [0.311, 0.265, 0.228, 0.216, 0.177, 0.06], "delta": [-0.107, -0.033, 0.0, -0.011, -0.077], "delta_gws": [2, 3, 4, 5, 6], "rank_prob": {"1": 0.083, "2": 0.129, "3": 0.175, "4": 0.247, "5": 0.367}}, "david": {"points": [56, 71, 50, 68, 45, 74], "total": [56, 127, 177, 245, 290, 364], "bench": [0, 2, 0, 0, 0, 6], "behind": [13, 27, 20, 33, 16, 2], "ewma": [56.0, 61.0, 57.3, 60.9, 55.6, 61.7], "mean": [56.0, 63.5, 59.0, 61.2, 58.0, 60.7], "transfers": [0, 1, 1, 1, 1, 0], "hits": [0, 0, 0, 0, 0, 0], "overall_rank": [2677591, 5100790, 5267498, 5195223, 5409858, 4089835], "win": [0.207, 0.165, 0.21, 0.14, 0.171, 0.266], "win_form": [0.207, 0.184, 0.231, 0.14, 0.18, 0.32], "delta": [-0.042, 0.045, -0.07, 0.031, 0.095], "delta_gws": [2, 3, 4, 5, 6], "rank_prob": {"1": 0.265, "2": 0.235, "3": 0.205, "4": 0.169, "5": 0.126}}}, "gameweeks": {"1": {"george": {"points": 46, "net_points": 46, "star": {"player": "Gu\u00e9hi", "points": 10}, "captain": {"player": "B.Fernandes", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 1, "missed": [], "auto_subs": []}, "mark": {"points": 58, "net_points": 58, "star": {"player": "Dewsbury-Hall", "points": 11}, "captain": {"player": "B.Fernandes", "points": 4, "vice_stood_in": true}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 0, "missed": [], "auto_subs": [{"in": "Armstrong", "out": "Bruno G."}, {"in": "Van Hecke", "out": "Gy\u00f6keres"}]}, "andy": {"points": 38, "net_points": 38, "star": {"player": "\u00d8degaard", "points": 11}, "captain": {"player": "Haaland", "points": 4, "vice_stood_in": true}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 2, "missed": [], "auto_subs": [{"in": "O'Shea", "out": "Gy\u00f6keres"}]}, "chris": {"points": 69, "net_points": 69, "star": {"player": "Jo\u00e3o Pedro", "points": 11}, "captain": {"player": "Gabriel", "points": 10, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 1, "missed": [], "auto_subs": [{"in": "Szoboszlai", "out": "Watkins"}]}, "david": {"points": 56, "net_points": 56, "star": {"player": "Jo\u00e3o Pedro", "points": 11}, "captain": {"player": "Haaland", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 0, "missed": [], "auto_subs": [{"in": "Jensen", "out": "Doku"}]}}, "2": {"george": {"points": 108, "net_points": 108, "star": {"player": "B.Fernandes", "points": 46}, "captain": {"player": "B.Fernandes", "points": 46, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 0, "missed": [], "auto_subs": []}, "mark": {"points": 58, "net_points": 58, "star": {"player": "B.Fernandes", "points": 23}, "captain": {"player": "Thiago", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Thiago", "in_points": 2, "out": "Gy\u00f6keres", "out_points": 0, "in_id": 106, "out_id": 25}], "hit": 0, "transfer_net": 2, "bench_points": 10, "missed": [{"player": "Calvert-Lewin", "points": 8}], "auto_subs": []}, "andy": {"points": 80, "net_points": 80, "star": {"player": "Jo\u00e3o Pedro", "points": 18}, "captain": {"player": "Jo\u00e3o Pedro", "points": 18, "vice_stood_in": false}, "chip": "Wildcard", "transfers": [{"in": "Calafiori", "in_points": 11, "out": "Maguire", "out_points": 4, "in_id": 8, "out_id": 418}, {"in": "Kayode", "in_points": 2, "out": "Robertson", "out_points": 2, "in_id": 88, "out_id": 502}, {"in": "Palmer", "in_points": 7, "out": "Mbeumo", "out_points": 11, "in_id": 154, "out_id": 427}, {"in": "Rogers", "in_points": 5, "out": "Wirtz", "out_points": 4, "in_id": 40, "out_id": 366}, {"in": "M.Sangar\u00e9", "in_points": 4, "out": "Tel", "out_points": 2, "in_id": 565, "out_id": 514}, {"in": "Slater", "in_points": 2, "out": "Longstaff", "out_points": 0, "in_id": 290, "out_id": 339}, {"in": "Jo\u00e3o Pedro", "in_points": 9, "out": "Gy\u00f6keres", "out_points": 0, "in_id": 165, "out_id": 25}], "hit": 0, "transfer_net": 17, "bench_points": 4, "missed": [], "auto_subs": []}, "chris": {"points": 62, "net_points": 62, "star": {"player": "Gabriel", "points": 16}, "captain": {"player": "Gabriel", "points": 16, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Gonzalo", "in_points": 2, "out": "Watkins", "out_points": 0, "in_id": 569, "out_id": 55}], "hit": 0, "transfer_net": 2, "bench_points": 7, "missed": [{"player": "Szoboszlai", "points": 4}], "auto_subs": []}, "david": {"points": 71, "net_points": 71, "star": {"player": "Haaland", "points": 26}, "captain": {"player": "Haaland", "points": 26, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Rogers", "in_points": 5, "out": "Doku", "out_points": 0, "in_id": 40, "out_id": 400}], "hit": 0, "transfer_net": 5, "bench_points": 2, "missed": [{"player": "Thiago", "points": 2}], "auto_subs": [{"in": "Furlong", "out": "Senesi"}]}}, "3": {"george": {"points": 43, "net_points": 43, "star": {"player": "Gu\u00e9hi", "points": 8}, "captain": {"player": "B.Fernandes", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Ajayi", "in_points": 5, "out": "Senesi", "out_points": 0, "in_id": 279, "out_id": 498}, {"in": "Elanga", "in_points": 1, "out": "Dowell", "out_points": 0, "in_id": 454, "out_id": 288}], "hit": 0, "transfer_net": 6, "bench_points": 0, "missed": [], "auto_subs": [{"in": "Virgil", "out": "O'Reilly"}]}, "mark": {"points": 32, "net_points": 32, "star": {"player": "Van Hecke", "points": 8}, "captain": {"player": "Cherki", "points": 6, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Cherki", "in_points": 3, "out": "Bruno G.", "out_points": 0, "in_id": 399, "out_id": 452}], "hit": 0, "transfer_net": 3, "bench_points": 3, "missed": [], "auto_subs": [{"in": "Van Hecke", "out": "O'Reilly"}]}, "andy": {"points": 51, "net_points": 51, "star": {"player": "Haaland", "points": 18}, "captain": {"player": "Haaland", "points": 18, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Elanga", "in_points": 1, "out": "\u00d8degaard", "out_points": 10, "in_id": 454, "out_id": 15}], "hit": 0, "transfer_net": -9, "bench_points": 9, "missed": [{"player": "O'Shea", "points": 3}, {"player": "Slater", "points": 3}], "auto_subs": []}, "chris": {"points": 39, "net_points": 39, "star": {"player": "Gu\u00e9hi", "points": 8}, "captain": {"player": "Foden", "points": 2, "vice_stood_in": false}, "chip": "Wildcard", "transfers": [{"in": "Donnarumma", "in_points": 7, "out": "Martinez", "out_points": 3, "in_id": 384, "out_id": 28}, {"in": "Jacquet", "in_points": 5, "out": "Van Hecke", "out_points": 8, "in_id": 362, "out_id": 112}, {"in": "Calafiori", "in_points": 2, "out": "Virgil", "out_points": 6, "in_id": 8, "out_id": 356}, {"in": "White", "in_points": 2, "out": "Tarkowski", "out_points": 3, "in_id": 10, "out_id": 229}, {"in": "Kayode", "in_points": 1, "out": "Gabriel", "out_points": 2, "in_id": 88, "out_id": 4}, {"in": "B.Fernandes", "in_points": 2, "out": "Rice", "out_points": 5, "in_id": 426, "out_id": 13}, {"in": "Barcola", "in_points": 1, "out": "Szoboszlai", "out_points": 3, "in_id": 627, "out_id": 368}, {"in": "Gro\u00df", "in_points": 1, "out": "Wirtz", "out_points": 3, "in_id": 124, "out_id": 366}, {"in": "Foden", "in_points": 1, "out": "Tielemans", "out_points": 2, "in_id": 398, "out_id": 43}, {"in": "Havertz", "in_points": 8, "out": "Gonzalo", "out_points": 2, "in_id": 26, "out_id": 569}, {"in": "Marmoush", "in_points": 2, "out": "Gy\u00f6keres", "out_points": 1, "in_id": 401, "out_id": 25}], "hit": 0, "transfer_net": -6, "bench_points": 11, "missed": [{"player": "Rogers", "points": 6}], "auto_subs": []}, "david": {"points": 50, "net_points": 50, "star": {"player": "Haaland", "points": 18}, "captain": {"player": "Haaland", "points": 18, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Gu\u00e9hi", "in_points": 8, "out": "Senesi", "out_points": 0, "in_id": 388, "out_id": 498}], "hit": 0, "transfer_net": 8, "bench_points": 0, "missed": [], "auto_subs": []}}, "4": {"george": {"points": 81, "net_points": 81, "star": {"player": "Raya", "points": 14}, "captain": {"player": "B.Fernandes", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "De Cuyper", "in_points": 11, "out": "O'Reilly", "out_points": 1, "in_id": 115, "out_id": 387}], "hit": 0, "transfer_net": 10, "bench_points": 0, "missed": [], "auto_subs": [{"in": "Ajayi", "out": "Elanga"}]}, "mark": {"points": 82, "net_points": 82, "star": {"player": "Jo\u00e3o Pedro", "points": 24}, "captain": {"player": "Jo\u00e3o Pedro", "points": 24, "vice_stood_in": false}, "chip": "Wildcard", "transfers": [{"in": "Gvardiol", "in_points": 11, "out": "Gabriel", "out_points": 9, "in_id": 391, "out_id": 4}, {"in": "Branthwaite", "in_points": 6, "out": "Van Hecke", "out_points": 8, "in_id": 230, "out_id": 112}, {"in": "Calafiori", "in_points": 6, "out": "Konsa", "out_points": 6, "in_id": 8, "out_id": 31}, {"in": "Mendy", "in_points": 1, "out": "O'Reilly", "out_points": 1, "in_id": 586, "out_id": 387}, {"in": "Ajayi", "in_points": 1, "out": "Lacroix", "out_points": 1, "in_id": 279, "out_id": 200}, {"in": "Rogers", "in_points": 8, "out": "Anderson", "out_points": 5, "in_id": 40, "out_id": 481}, {"in": "Janelt", "in_points": 4, "out": "Armstrong", "out_points": 3, "in_id": 98, "out_id": 244}, {"in": "Scott", "in_points": 4, "out": "Cherki", "out_points": 1, "in_id": 69, "out_id": 399}, {"in": "Haaland", "in_points": 9, "out": "Calvert-Lewin", "out_points": 10, "in_id": 411, "out_id": 346}, {"in": "Thomas-Asante", "in_points": 1, "out": "Thiago", "out_points": 1, "in_id": 194, "out_id": 106}], "hit": 0, "transfer_net": 6, "bench_points": 3, "missed": [], "auto_subs": []}, "andy": {"points": 90, "net_points": 90, "star": {"player": "Jo\u00e3o Pedro", "points": 24}, "captain": {"player": "Jo\u00e3o Pedro", "points": 24, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Schade", "in_points": 15, "out": "Elanga", "out_points": 0, "in_id": 94, "out_id": 454}], "hit": 0, "transfer_net": 15, "bench_points": 3, "missed": [], "auto_subs": []}, "chris": {"points": 80, "net_points": 80, "star": {"player": "Jo\u00e3o Pedro", "points": 24}, "captain": {"player": "Jo\u00e3o Pedro", "points": 24, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 8, "missed": [{"player": "Donnarumma", "points": 7}], "auto_subs": []}, "david": {"points": 68, "net_points": 68, "star": {"player": "Haaland", "points": 18}, "captain": {"player": "Haaland", "points": 18, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Cash", "in_points": 0, "out": "Rodon", "out_points": 0, "in_id": 32, "out_id": 329}], "hit": 0, "transfer_net": 0, "bench_points": 0, "missed": [], "auto_subs": [{"in": "O'Shea", "out": "Cash"}]}}, "5": {"george": {"points": 27, "net_points": 27, "star": {"player": "De Cuyper", "points": 6}, "captain": {"player": "B.Fernandes", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Emersonn", "in_points": 2, "out": "Furo", "out_points": 0, "in_id": 316, "out_id": 107}], "hit": 0, "transfer_net": 2, "bench_points": 8, "missed": [{"player": "Virgil", "points": 8}], "auto_subs": []}, "mark": {"points": 52, "net_points": 52, "star": {"player": "Haaland", "points": 18}, "captain": {"player": "Haaland", "points": 18, "vice_stood_in": false}, "chip": "Triple captain", "transfers": [{"in": "Tavernier", "in_points": 2, "out": "Scott", "out_points": 2, "in_id": 68, "out_id": 69}], "hit": 0, "transfer_net": 0, "bench_points": 4, "missed": [{"player": "Thomas-Asante", "points": 4}], "auto_subs": [{"in": "Ajayi", "out": "Jo\u00e3o Pedro"}]}, "andy": {"points": 47, "net_points": 47, "star": {"player": "Isak", "points": 16}, "captain": {"player": "Isak", "points": 16, "vice_stood_in": true}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 2, "missed": [{"player": "Slater", "points": 2}], "auto_subs": [{"in": "O'Shea", "out": "Jo\u00e3o Pedro"}]}, "chris": {"points": 37, "net_points": 37, "star": {"player": "Jacquet", "points": 6}, "captain": {"player": "B.Fernandes", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Ndiaye", "in_points": 5, "out": "Foden", "out_points": 0, "in_id": 237, "out_id": 398}], "hit": 0, "transfer_net": 5, "bench_points": 20, "missed": [{"player": "Gro\u00df", "points": 14}, {"player": "Kelleher", "points": 6}], "auto_subs": [{"in": "Marmoush", "out": "White"}, {"in": "Kayode", "out": "Jo\u00e3o Pedro"}]}, "david": {"points": 45, "net_points": 45, "star": {"player": "Haaland", "points": 12}, "captain": {"player": "Haaland", "points": 12, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Belloumi", "in_points": 4, "out": "Jensen", "out_points": 0, "in_id": 286, "out_id": 97}], "hit": 0, "transfer_net": 4, "bench_points": 0, "missed": [], "auto_subs": [{"in": "Cunha", "out": "Jo\u00e3o Pedro"}]}}, "6": {"george": {"points": 50, "net_points": 50, "star": {"player": "De Cuyper", "points": 15}, "captain": {"player": "Saka", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Gro\u00df", "in_points": 6, "out": "Elanga", "out_points": 0, "in_id": 124, "out_id": 454}], "hit": 0, "transfer_net": 6, "bench_points": 3, "missed": [], "auto_subs": []}, "mark": {"points": 68, "net_points": 68, "star": {"player": "Dewsbury-Hall", "points": 13}, "captain": {"player": "Haaland", "points": 12, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 9, "missed": [{"player": "Thomas-Asante", "points": 5}, {"player": "Mendy", "points": 3}], "auto_subs": []}, "andy": {"points": 60, "net_points": 60, "star": {"player": "Jo\u00e3o Pedro", "points": 24}, "captain": {"player": "Jo\u00e3o Pedro", "points": 24, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Wissa", "in_points": 2, "out": "Haaland", "out_points": 6, "in_id": 464, "out_id": 411}, {"in": "Kostoulas", "in_points": 1, "out": "Isak", "out_points": 0, "in_id": 138, "out_id": 379}], "hit": 0, "transfer_net": -3, "bench_points": 19, "missed": [{"player": "O'Shea", "points": 11}, {"player": "van Ewijk", "points": 6}], "auto_subs": []}, "chris": {"points": 40, "net_points": 40, "star": {"player": "Calafiori", "points": 9}, "captain": {"player": "Saka", "points": 4, "vice_stood_in": false}, "chip": "Free hit", "transfers": [{"in": "Raya", "in_points": 3, "out": "Donnarumma", "out_points": 9, "in_id": 1, "out_id": 384}, {"in": "Tarkowski", "in_points": 3, "out": "Gu\u00e9hi", "out_points": 6, "in_id": 229, "out_id": 388}, {"in": "Ajayi", "in_points": 1, "out": "White", "out_points": 5, "in_id": 279, "out_id": 10}, {"in": "Hall", "in_points": 0, "out": "Jacquet", "out_points": 3, "in_id": 449, "out_id": 362}, {"in": "Gibbs-White", "in_points": 2, "out": "Barcola", "out_points": 2, "in_id": 480, "out_id": 627}, {"in": "Saka", "in_points": 2, "out": "Ndiaye", "out_points": 1, "in_id": 12, "out_id": 237}, {"in": "Wissa", "in_points": 2, "out": "Havertz", "out_points": 2, "in_id": 464, "out_id": 26}, {"in": "Kostoulas", "in_points": 1, "out": "Marmoush", "out_points": 1, "in_id": 138, "out_id": 401}], "hit": 0, "transfer_net": -15, "bench_points": 15, "missed": [{"player": "Jo\u00e3o Pedro", "points": 12}], "auto_subs": []}, "david": {"points": 74, "net_points": 74, "star": {"player": "Haaland", "points": 12}, "captain": {"player": "Haaland", "points": 12, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 6, "missed": [{"player": "van Ewijk", "points": 6}], "auto_subs": [{"in": "Cunha", "out": "Szoboszlai"}]}}}, "season_transfers": {"george": {"transfers": 5, "hits": 0, "chips": [], "gain": 42, "gain_regular": 42, "gain_chips": 0, "best": {"gw": 4, "in": "De Cuyper", "out": "O'Reilly", "weeks": 3, "in_points": 32, "out_points": 7, "gain": 25, "chip": null}, "worst": null, "moves": [{"gw": 3, "in": "Ajayi", "out": "Senesi", "weeks": 4, "in_points": 8, "out_points": 2, "gain": 6, "chip": null}, {"gw": 3, "in": "Elanga", "out": "Dowell", "weeks": 3, "in_points": 1, "out_points": 0, "gain": 1, "chip": null}, {"gw": 4, "in": "De Cuyper", "out": "O'Reilly", "weeks": 3, "in_points": 32, "out_points": 7, "gain": 25, "chip": null}, {"gw": 5, "in": "Emersonn", "out": "Furo", "weeks": 2, "in_points": 4, "out_points": 0, "gain": 4, "chip": null}, {"gw": 6, "in": "Gro\u00df", "out": "Elanga", "weeks": 1, "in_points": 6, "out_points": 0, "gain": 6, "chip": null}]}, "mark": {"transfers": 3, "hits": 0, "chips": [{"gw": 4, "chip": "Wildcard"}, {"gw": 5, "chip": "Triple captain"}], "gain": 32, "gain_regular": 7, "gain_chips": 25, "best": {"gw": 3, "in": "Cherki", "out": "Bruno G.", "weeks": 1, "in_points": 3, "out_points": 0, "gain": 3, "chip": null}, "worst": null, "moves": [{"gw": 2, "in": "Thiago", "out": "Gy\u00f6keres", "weeks": 2, "in_points": 4, "out_points": 1, "gain": 3, "chip": null}, {"gw": 3, "in": "Cherki", "out": "Bruno G.", "weeks": 1, "in_points": 3, "out_points": 0, "gain": 3, "chip": null}, {"gw": 4, "in": "Gvardiol", "out": "Gabriel", "weeks": 3, "in_points": 19, "out_points": 12, "gain": 7, "chip": "Wildcard"}, {"gw": 4, "in": "Branthwaite", "out": "Van Hecke", "weeks": 3, "in_points": 17, "out_points": 17, "gain": 0, "chip": "Wildcard"}, {"gw": 4, "in": "Calafiori", "out": "Konsa", "weeks": 3, "in_points": 16, "out_points": 11, "gain": 5, "chip": "Wildcard"}, {"gw": 4, "in": "Mendy", "out": "O'Reilly", "weeks": 3, "in_points": 4, "out_points": 7, "gain": -3, "chip": "Wildcard"}, {"gw": 4, "in": "Ajayi", "out": "Lacroix", "weeks": 3, "in_points": 3, "out_points": 6, "gain": -3, "chip": "Wildcard"}, {"gw": 4, "in": "Rogers", "out": "Anderson", "weeks": 3, "in_points": 19, "out_points": 13, "gain": 6, "chip": "Wildcard"}, {"gw": 4, "in": "Janelt", "out": "Armstrong", "weeks": 3, "in_points": 10, "out_points": 7, "gain": 3, "chip": "Wildcard"}, {"gw": 4, "in": "Scott", "out": "Cherki", "weeks": 1, "in_points": 4, "out_points": 1, "gain": 3, "chip": "Wildcard"}, {"gw": 4, "in": "Haaland", "out": "Calvert-Lewin", "weeks": 3, "in_points": 21, "out_points": 14, "gain": 7, "chip": "Wildcard"}, {"gw": 4, "in": "Thomas-Asante", "out": "Thiago", "weeks": 3, "in_points": 10, "out_points": 10, "gain": 0, "chip": "Wildcard"}, {"gw": 5, "in": "Tavernier", "out": "Scott", "weeks": 2, "in_points": 3, "out_points": 2, "gain": 1, "chip": null}]}, "andy": {"transfers": 4, "hits": 0, "chips": [{"gw": 2, "chip": "Wildcard"}], "gain": 75, "gain_regular": 13, "gain_chips": 62, "best": {"gw": 4, "in": "Schade", "out": "Elanga", "weeks": 3, "in_points": 25, "out_points": 0, "gain": 25, "chip": null}, "worst": {"gw": 3, "in": "Elanga", "out": "\u00d8degaard", "weeks": 1, "in_points": 1, "out_points": 10, "gain": -9, "chip": null}, "moves": [{"gw": 2, "in": "Calafiori", "out": "Maguire", "weeks": 5, "in_points": 29, "out_points": 11, "gain": 18, "chip": "Wildcard"}, {"gw": 2, "in": "Kayode", "out": "Robertson", "weeks": 5, "in_points": 10, "out_points": 14, "gain": -4, "chip": "Wildcard"}, {"gw": 2, "in": "Palmer", "out": "Mbeumo", "weeks": 5, "in_points": 23, "out_points": 31, "gain": -8, "chip": "Wildcard"}, {"gw": 2, "in": "Rogers", "out": "Wirtz", "weeks": 5, "in_points": 30, "out_points": 18, "gain": 12, "chip": "Wildcard"}, {"gw": 2, "in": "M.Sangar\u00e9", "out": "Tel", "weeks": 5, "in_points": 9, "out_points": 6, "gain": 3, "chip": "Wildcard"}, {"gw": 2, "in": "Slater", "out": "Longstaff", "weeks": 5, "in_points": 11, "out_points": 1, "gain": 10, "chip": "Wildcard"}, {"gw": 2, "in": "Jo\u00e3o Pedro", "out": "Gy\u00f6keres", "weeks": 5, "in_points": 34, "out_points": 3, "gain": 31, "chip": "Wildcard"}, {"gw": 3, "in": "Elanga", "out": "\u00d8degaard", "weeks": 1, "in_points": 1, "out_points": 10, "gain": -9, "chip": null}, {"gw": 4, "in": "Schade", "out": "Elanga", "weeks": 3, "in_points": 25, "out_points": 0, "gain": 25, "chip": null}, {"gw": 6, "in": "Wissa", "out": "Haaland", "weeks": 1, "in_points": 2, "out_points": 6, "gain": -4, "chip": null}, {"gw": 6, "in": "Kostoulas", "out": "Isak", "weeks": 1, "in_points": 1, "out_points": 0, "gain": 1, "chip": null}]}, "chris": {"transfers": 2, "hits": 0, "chips": [{"gw": 3, "chip": "Wildcard"}, {"gw": 6, "chip": "Free hit"}], "gain": -7, "gain_regular": 8, "gain_chips": -15, "best": {"gw": 5, "in": "Ndiaye", "out": "Foden", "weeks": 2, "in_points": 6, "out_points": 0, "gain": 6, "chip": null}, "worst": null, "moves": [{"gw": 2, "in": "Gonzalo", "out": "Watkins", "weeks": 1, "in_points": 2, "out_points": 0, "gain": 2, "chip": null}, {"gw": 3, "in": "Donnarumma", "out": "Martinez", "weeks": 4, "in_points": 25, "out_points": 10, "gain": 15, "chip": "Wildcard"}, {"gw": 3, "in": "Jacquet", "out": "Van Hecke", "weeks": 4, "in_points": 23, "out_points": 25, "gain": -2, "chip": "Wildcard"}, {"gw": 3, "in": "Calafiori", "out": "Virgil", "weeks": 4, "in_points": 18, "out_points": 22, "gain": -4, "chip": "Wildcard"}, {"gw": 3, "in": "White", "out": "Tarkowski", "weeks": 4, "in_points": 8, "out_points": 28, "gain": -20, "chip": "Wildcard"}, {"gw": 3, "in": "Kayode", "out": "Gabriel", "weeks": 4, "in_points": 8, "out_points": 14, "gain": -6, "chip": "Wildcard"}, {"gw": 3, "in": "B.Fernandes", "out": "Rice", "weeks": 4, "in_points": 7, "out_points": 19, "gain": -12, "chip": "Wildcard"}, {"gw": 3, "in": "Barcola", "out": "Szoboszlai", "weeks": 4, "in_points": 9, "out_points": 8, "gain": 1, "chip": "Wildcard"}, {"gw": 3, "in": "Gro\u00df", "out": "Wirtz", "weeks": 4, "in_points": 38, "out_points": 14, "gain": 24, "chip": "Wildcard"}, {"gw": 3, "in": "Foden", "out": "Tielemans", "weeks": 2, "in_points": -1, "out_points": 4, "gain": -5, "chip": "Wildcard"}, {"gw": 3, "in": "Havertz", "out": "Gonzalo", "weeks": 4, "in_points": 13, "out_points": 8, "gain": 5, "chip": "Wildcard"}, {"gw": 3, "in": "Marmoush", "out": "Gy\u00f6keres", "weeks": 4, "in_points": 7, "out_points": 3, "gain": 4, "chip": "Wildcard"}, {"gw": 5, "in": "Ndiaye", "out": "Foden", "weeks": 2, "in_points": 6, "out_points": 0, "gain": 6, "chip": null}, {"gw": 6, "in": "Raya", "out": "Donnarumma", "weeks": 1, "in_points": 3, "out_points": 9, "gain": -6, "chip": "Free hit"}, {"gw": 6, "in": "Tarkowski", "out": "Gu\u00e9hi", "weeks": 1, "in_points": 3, "out_points": 6, "gain": -3, "chip": "Free hit"}, {"gw": 6, "in": "Ajayi", "out": "White", "weeks": 1, "in_points": 1, "out_points": 5, "gain": -4, "chip": "Free hit"}, {"gw": 6, "in": "Hall", "out": "Jacquet", "weeks": 1, "in_points": 0, "out_points": 3, "gain": -3, "chip": "Free hit"}, {"gw": 6, "in": "Gibbs-White", "out": "Barcola", "weeks": 1, "in_points": 2, "out_points": 2, "gain": 0, "chip": "Free hit"}, {"gw": 6, "in": "Saka", "out": "Ndiaye", "weeks": 1, "in_points": 2, "out_points": 1, "gain": 1, "chip": "Free hit"}, {"gw": 6, "in": "Wissa", "out": "Havertz", "weeks": 1, "in_points": 2, "out_points": 2, "gain": 0, "chip": "Free hit"}, {"gw": 6, "in": "Kostoulas", "out": "Marmoush", "weeks": 1, "in_points": 1, "out_points": 1, "gain": 0, "chip": "Free hit"}]}, "david": {"transfers": 4, "hits": 0, "chips": [], "gain": 47, "gain_regular": 47, "gain_chips": 0, "best": {"gw": 3, "in": "Gu\u00e9hi", "out": "Senesi", "weeks": 4, "in_points": 24, "out_points": 2, "gain": 22, "chip": null}, "worst": {"gw": 4, "in": "Cash", "out": "Rodon", "weeks": 3, "in_points": -1, "out_points": 0, "gain": -1, "chip": null}, "moves": [{"gw": 2, "in": "Rogers", "out": "Doku", "weeks": 5, "in_points": 30, "out_points": 13, "gain": 17, "chip": null}, {"gw": 3, "in": "Gu\u00e9hi", "out": "Senesi", "weeks": 4, "in_points": 24, "out_points": 2, "gain": 22, "chip": null}, {"gw": 4, "in": "Cash", "out": "Rodon", "weeks": 3, "in_points": -1, "out_points": 0, "gain": -1, "chip": null}, {"gw": 5, "in": "Belloumi", "out": "Jensen", "weeks": 2, "in_points": 10, "out_points": 1, "gain": 9, "chip": null}]}}, "insights": {"leader": "andy", "chips": {"george": [{"chip": "3xc", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "3xc", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 20, "stop": 38, "status": "available", "used_gw": null}], "chris": [{"chip": "3xc", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 2, "stop": 19, "status": "used", "used_gw": 6}, {"chip": "wildcard", "start": 2, "stop": 19, "status": "used", "used_gw": 3}, {"chip": "3xc", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 20, "stop": 38, "status": "available", "used_gw": null}], "david": [{"chip": "3xc", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "3xc", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 20, "stop": 38, "status": "available", "used_gw": null}], "andy": [{"chip": "3xc", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 2, "stop": 19, "status": "used", "used_gw": 2}, {"chip": "3xc", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 20, "stop": 38, "status": "available", "used_gw": null}], "mark": [{"chip": "3xc", "start": 1, "stop": 19, "status": "used", "used_gw": 5}, {"chip": "bboost", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 2, "stop": 19, "status": "used", "used_gw": 4}, {"chip": "3xc", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 20, "stop": 38, "status": "available", "used_gw": null}]}, "captaincy": {"george": {"points": 66, "best": 152, "lost": 86, "weeks": [{"gw": 1, "captain": "B.Fernandes", "points": 4, "best": "Gu\u00e9hi", "best_points": 20}, {"gw": 2, "captain": "B.Fernandes", "points": 46, "best": "B.Fernandes", "best_points": 46}, {"gw": 3, "captain": "B.Fernandes", "points": 4, "best": "Gu\u00e9hi", "best_points": 16}, {"gw": 4, "captain": "B.Fernandes", "points": 4, "best": "Raya", "best_points": 28}, {"gw": 5, "captain": "B.Fernandes", "points": 4, "best": "De Cuyper", "best_points": 12}, {"gw": 6, "captain": "Saka", "points": 4, "best": "De Cuyper", "best_points": 30}]}, "mark": {"points": 68, "best": 158, "lost": 90, "weeks": [{"gw": 1, "captain": "B.Fernandes", "points": 4, "best": "Dewsbury-Hall", "best_points": 22}, {"gw": 2, "captain": "Thiago", "points": 4, "best": "B.Fernandes", "best_points": 46}, {"gw": 3, "captain": "Cherki", "points": 6, "best": "Van Hecke", "best_points": 16}, {"gw": 4, "captain": "Jo\u00e3o Pedro", "points": 24, "best": "Jo\u00e3o Pedro", "best_points": 24}, {"gw": 5, "captain": "Haaland", "points": 18, "best": "Pickford", "best_points": 24}, {"gw": 6, "captain": "Haaland", "points": 12, "best": "Dewsbury-Hall", "best_points": 26}]}, "andy": {"points": 104, "best": 146, "lost": 42, "weeks": [{"gw": 1, "captain": "Haaland", "points": 4, "best": "\u00d8degaard", "best_points": 22}, {"gw": 2, "captain": "Jo\u00e3o Pedro", "points": 18, "best": "Haaland", "best_points": 26}, {"gw": 3, "captain": "Haaland", "points": 18, "best": "Isak", "best_points": 26}, {"gw": 4, "captain": "Jo\u00e3o Pedro", "points": 24, "best": "Schade", "best_points": 30}, {"gw": 5, "captain": "Isak", "points": 16, "best": "Schade", "best_points": 18}, {"gw": 6, "captain": "Jo\u00e3o Pedro", "points": 24, "best": "Jo\u00e3o Pedro", "best_points": 24}]}, "chris": {"points": 60, "best": 126, "lost": 66, "weeks": [{"gw": 1, "captain": "Gabriel", "points": 10, "best": "Jo\u00e3o Pedro", "best_points": 22}, {"gw": 2, "captain": "Gabriel", "points": 16, "best": "Tarkowski", "best_points": 24}, {"gw": 3, "captain": "Foden", "points": 2, "best": "Gu\u00e9hi", "best_points": 16}, {"gw": 4, "captain": "Jo\u00e3o Pedro", "points": 24, "best": "Gro\u00df", "best_points": 34}, {"gw": 5, "captain": "B.Fernandes", "points": 4, "best": "Jacquet", "best_points": 12}, {"gw": 6, "captain": "Saka", "points": 4, "best": "Calafiori", "best_points": 18}]}, "david": {"points": 90, "best": 134, "lost": 44, "weeks": [{"gw": 1, "captain": "Haaland", "points": 4, "best": "Jo\u00e3o Pedro", "best_points": 22}, {"gw": 2, "captain": "Haaland", "points": 26, "best": "Haaland", "best_points": 26}, {"gw": 3, "captain": "Haaland", "points": 18, "best": "Haaland", "best_points": 18}, {"gw": 4, "captain": "Haaland", "points": 18, "best": "Jo\u00e3o Pedro", "best_points": 24}, {"gw": 5, "captain": "Haaland", "points": 12, "best": "Cunha", "best_points": 20}, {"gw": 6, "captain": "Haaland", "points": 12, "best": "Jo\u00e3o Pedro", "best_points": 24}]}}, "most_captained": {"1": {"player": "B.Fernandes", "managers": 2}, "2": {"player": "B.Fernandes", "managers": 1}, "3": {"player": "Haaland", "managers": 2}, "4": {"player": "Jo\u00e3o Pedro", "managers": 3}, "5": {"player": "B.Fernandes", "managers": 2}, "6": {"player": "Saka", "managers": 2}}, "gap": {"george": {"season": {"unique": 8, "captaincy": -19, "hits": 0, "gap": -11}, "recent": {"unique": 0, "captaincy": -19, "hits": 0, "gap": -19}, "recent_gws": 5, "only_mine": ["Raya", "Saka", "De Cuyper", "Gro\u00df", "Ajayi", "Emersonn", "Walle Egeli", "Calvert-Lewin", "Virgil", "Gu\u00e9hi", "B.Fernandes", "Mbeumo", "Gibbs-White", "Dubravka"], "only_theirs": ["Calafiori", "Rogers", "Kayode", "Schade", "Steele", "Kostoulas", "Palmer", "Jo\u00e3o Pedro", "van Ewijk", "Slater", "O'Shea", "Wissa", "Kinsky", "M.Sangar\u00e9"]}, "mark": {"season": {"unique": -1, "captaincy": -15, "hits": 0, "gap": -16}, "recent": {"unique": -21, "captaincy": -15, "hits": 0, "gap": -36}, "recent_gws": 5, "only_mine": ["Tavernier", "Janelt", "Thomas-Asante", "Pickford", "Branthwaite", "Dewsbury-Hall", "Ajayi", "Gvardiol", "Haaland", "B.Fernandes", "Dubravka", "Mendy"], "only_theirs": ["Gabriel", "Kayode", "Schade", "Steele", "Kostoulas", "Palmer", "van Ewijk", "Slater", "O'Shea", "Wissa", "Kinsky", "M.Sangar\u00e9"]}, "andy": null, "chris": {"season": {"unique": -17, "captaincy": -22, "hits": 0, "gap": -39}, "recent": {"unique": -45, "captaincy": -25, "hits": 0, "gap": -70}, "recent_gws": 5, "only_mine": ["Raya", "Saka", "Kelleher", "Gro\u00df", "Tarkowski", "Ajayi", "B.Fernandes", "Hall", "Gibbs-White"], "only_theirs": ["Gabriel", "Schade", "Steele", "Palmer", "van Ewijk", "Slater", "O'Shea", "Kinsky", "M.Sangar\u00e9"]}, "david": {"season": {"unique": 5, "captaincy": -7, "hits": 0, "gap": -2}, "recent": {"unique": -13, "captaincy": -7, "hits": 0, "gap": -20}, "recent_gws": 5, "only_mine": ["Saka", "Cash", "Thiago", "Leno", "Butland", "Belloumi", "Furlong", "Szoboszlai", "Gu\u00e9hi", "Haaland", "Cunha"], "only_theirs": ["Gabriel", "Calafiori", "Kayode", "Schade", "Steele", "Kostoulas", "Palmer", "Slater", "Wissa", "Kinsky", "M.Sangar\u00e9"]}}, "outlook": {"george": [{"gw": 7, "difficulty": 3.13, "blanks": 0, "doubles": 0}, {"gw": 8, "difficulty": 3.13, "blanks": 0, "doubles": 0}, {"gw": 9, "difficulty": 3.4, "blanks": 0, "doubles": 0}, {"gw": 10, "difficulty": 2.93, "blanks": 0, "doubles": 0}, {"gw": 11, "difficulty": 3.0, "blanks": 0, "doubles": 0}], "mark": [{"gw": 7, "difficulty": 3.07, "blanks": 0, "doubles": 0}, {"gw": 8, "difficulty": 3.27, "blanks": 0, "doubles": 0}, {"gw": 9, "difficulty": 3.07, "blanks": 0, "doubles": 0}, {"gw": 10, "difficulty": 3.0, "blanks": 0, "doubles": 0}, {"gw": 11, "difficulty": 2.8, "blanks": 0, "doubles": 0}], "andy": [{"gw": 7, "difficulty": 3.13, "blanks": 0, "doubles": 0}, {"gw": 8, "difficulty": 2.73, "blanks": 0, "doubles": 0}, {"gw": 9, "difficulty": 3.4, "blanks": 0, "doubles": 0}, {"gw": 10, "difficulty": 3.2, "blanks": 0, "doubles": 0}, {"gw": 11, "difficulty": 2.8, "blanks": 0, "doubles": 0}], "chris": [{"gw": 7, "difficulty": 3.13, "blanks": 0, "doubles": 0}, {"gw": 8, "difficulty": 2.93, "blanks": 0, "doubles": 0}, {"gw": 9, "difficulty": 3.6, "blanks": 0, "doubles": 0}, {"gw": 10, "difficulty": 3.07, "blanks": 0, "doubles": 0}, {"gw": 11, "difficulty": 3.07, "blanks": 0, "doubles": 0}], "david": [{"gw": 7, "difficulty": 3.13, "blanks": 0, "doubles": 0}, {"gw": 8, "difficulty": 2.73, "blanks": 0, "doubles": 0}, {"gw": 9, "difficulty": 3.0, "blanks": 0, "doubles": 0}, {"gw": 10, "difficulty": 3.33, "blanks": 0, "doubles": 0}, {"gw": 11, "difficulty": 3.07, "blanks": 0, "doubles": 0}]}, "bench": {"george": {"bench_unused": 12, "autosub_points": 7, "autosubs": 2}, "mark": {"bench_unused": 29, "autosub_points": 18, "autosubs": 4}, "andy": {"bench_unused": 39, "autosub_points": 6, "autosubs": 2}, "chris": {"bench_unused": 62, "autosub_points": 16, "autosubs": 3}, "david": {"bench_unused": 8, "autosub_points": 28, "autosubs": 5}}, "h2h": {"andy": {"chris": [5, 0, 1], "david": [4, 0, 2], "george": [4, 0, 2], "mark": [3, 0, 3]}, "chris": {"andy": [1, 0, 5], "david": [2, 0, 4], "george": [2, 0, 4], "mark": [3, 0, 3]}, "david": {"andy": [2, 0, 4], "chris": [4, 0, 2], "george": [4, 0, 2], "mark": [3, 0, 3]}, "george": {"andy": [2, 0, 4], "chris": [4, 0, 2], "david": [2, 0, 4], "mark": [2, 0, 4]}, "mark": {"andy": [3, 0, 3], "chris": [3, 0, 3], "david": [3, 0, 3], "george": [4, 0, 2]}}}};
+const META = {"season": "2026-27", "provisional": "", "pulled": "13 Oct 2026", "leagueName": "The Boys FPL", "teams": {"george": "xP Marks the Spot", "mark": "Bramley-Moore Boys", "andy": "Full Metal Jacquet", "chris": "Andoni's Army", "david": "Red26"}, "labels": {}, "commentary": {"1": "<p><b>Chris</b> opens the season on top with 69, built on Jo\u00e3o Pedro's 11 and a 10-point Gabriel captaincy. <b>Andy</b> props up the table on 38: his captain didn't play, and Haaland's stand-in armband was worth 4.</p>", "2": "<p><b>George</b> took Bruno's 23 and doubled it: 46 from the armband and 108 for the week, the best score in the league so far. He goes top and his win chance jumps 24 points to 39%.</p><p><b>Andy</b> didn't wait around. He wildcarded after one week, changed seven players, and the new arrivals outscored the departures by 17. Mark left Calvert-Lewin's 8 on the bench.</p>", "3": "<p>A quiet week. <b>Andy</b>'s Haaland captaincy (18) made him top scorer on 51, but he sold \u00d8degaard, who got 10, for Elanga, who got 1.</p><p><b>Chris</b> wildcarded too. He made eleven changes, the new players scored six fewer than the ones they replaced, and he finished on 39 with 11 on the bench. George's 43 keeps him 20 clear.</p>", "4": "<p><b>Andy</b> swapped Elanga for Schade and Schade returned 15, with Jo\u00e3o Pedro's 24-point captaincy taking him to 90. <b>Mark</b> wildcarded into the same Jo\u00e3o Pedro armband for 82.</p><p><b>George</b> scored 81 with Raya on 14 and new signing De Cuyper on 11, but his Bruno captaincy managed 4. He still leads by 19.</p>", "5": "<p><b>George</b>'s worst week: 27, with Virgil's 8 sat on the bench. <b>Andy</b>'s 47 is enough to take top spot by a single point, 306 to 305.</p><p><b>Mark</b> triple-captained Haaland for 18 and topped the week on 52. <b>Chris</b> left Gro\u00df (14) and Kelleher (6) on the bench, 20 points in total.</p>", "6": "<p><b>Mark</b> tops the week on 68 with Dewsbury-Hall on 13 and Haaland (C) on 12. His win chance is up 7 points to 19%, and the top four are now separated by 16 points.</p><p><b>Andy</b> sold Haaland and Isak and still scored 60, thanks to a 24-point Jo\u00e3o Pedro captaincy. He also benched O'Shea's 11. <b>Chris</b> played his free hit and scored 40. The free-hit players scored 15 fewer than the ones they replaced, and Jo\u00e3o Pedro sat on his bench. Andy leads by 11, and George and David are separated by one point.</p>"}};
+
+const NAMES = DATA.names;
+const M = DATA.managers;
+const GWS = DATA.gws;
+const LAST = GWS.length - 1;
+const COLOUR = Object.fromEntries(NAMES.map((n, i) => [n, `var(--c${i})`]));
+const label = n => META.labels[n] || (n[0].toUpperCase() + n.slice(1));
+const pct = (x, d = 0) => x == null ? '–' : (x * 100).toFixed(d) + '%';
+const fmt = (x, d = 0) => x == null ? '–' : Number(x).toFixed(d);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+let focus = null;
+try { const saved = localStorage.getItem('fpl-focus-' + DATA.league); if (saved && NAMES.includes(saved)) focus = saved; } catch (e) { /* storage unavailable */ }
+
+// ---------- header ----------
+const order = [...NAMES].sort((a, b) => M[b].total[LAST] - M[a].total[LAST]);
+const leader = order[0], second = order[1];
+const byWin = [...NAMES].sort((a, b) => M[b].win[LAST] - M[a].win[LAST]);
+const lastDelta = NAMES.map(n => [n, M[n].delta[M[n].delta.length - 1] || 0]);
+const bestMover = lastDelta.reduce((a, b) => (b[1] > a[1] ? b : a));
+const worstMover = lastDelta.reduce((a, b) => (b[1] < a[1] ? b : a));
+const gwScores = NAMES.map(n => [n, M[n].points[LAST]]).sort((a, b) => b[1] - a[1]);
+
+document.getElementById('eyebrow').textContent = `${META.season} · after gameweek ${GWS[LAST]} of 38 · ${NAMES.length} managers`;
+document.getElementById('h1').textContent = META.leagueName;
+const gap = M[leader].total[LAST] - M[second].total[LAST];
+let lede = `<b>${esc(label(leader))}</b> leads by <b>${gap}</b> point${gap === 1 ? '' : 's'} from ${esc(label(second))}. `;
+lede += byWin[0] === leader
+  ? `The simulation agrees, giving ${esc(label(leader))} a <b>${pct(M[leader].win[LAST])}</b> chance of finishing top, with ${GWS.length > 0 ? 38 - GWS[LAST] : 38} gameweeks to play.`
+  : `The simulation still has <b>${esc(label(byWin[0]))}</b> as favourite at ${pct(M[byWin[0]].win[LAST])}, with ${38 - GWS[LAST]} gameweeks to play.`;
+document.getElementById('lede').innerHTML = lede;
+
+const tiles = [
+  ['Leader', label(leader), `${M[leader].total[LAST]} pts`],
+  ['Favourite', label(byWin[0]), `${pct(M[byWin[0]].win[LAST])} to win`],
+  [`Top GW${GWS[LAST]} score`, String(gwScores[0][1]), label(gwScores[0][0])],
+  [`Biggest GW${GWS[LAST]} mover`, bestMover[1] > 0 ? label(bestMover[0]) : '—', bestMover[1] > 0 ? `+${(bestMover[1] * 100).toFixed(1)} pts of win chance` : 'No shift beat the noise'],
+];
+document.getElementById('tiles').innerHTML = tiles.map(([k, v, s]) =>
+  `<div class="tile"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="s">${esc(s)}</div></div>`).join('');
+
+// ---------- focus chips ----------
+const bar = document.getElementById('focusbar');
+for (const n of NAMES) {
+  const b = document.createElement('button');
+  b.className = 'chip'; b.type = 'button'; b.dataset.name = n;
+  b.innerHTML = `<i style="background:${COLOUR[n]}"></i>${esc(label(n))}`;
+  b.addEventListener('click', () => setFocus(focus === n ? null : n));
+  bar.appendChild(b);
+}
+const clear = document.createElement('button');
+clear.className = 'chip clear'; clear.type = 'button'; clear.textContent = 'Show all';
+clear.addEventListener('click', () => setFocus(null));
+bar.appendChild(clear);
+
+function setFocus(n) {
+  focus = n;
+  try { n ? localStorage.setItem('fpl-focus-' + DATA.league, n) : localStorage.removeItem('fpl-focus-' + DATA.league); } catch (e) { /* storage unavailable */ }
+  applyFocus();
+}
+function applyFocus() {
+  bar.querySelectorAll('.chip[data-name]').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.name === focus)));
+  clear.hidden = !focus;
+  document.querySelectorAll('[data-mgr]').forEach(el => {
+    const on = !focus || el.dataset.mgr === focus;
+    if (el.tagName === 'TR') { el.classList.toggle('dim', !on); el.classList.toggle('hl', !!focus && on); }
+    else if (el.classList.contains('panel') || el.classList.contains('gaprow')) el.classList.toggle('dim', !on);
+    else el.classList.toggle('dimmed', !on);
+  });
+}
+
+document.querySelectorAll('[data-legend]').forEach(el => {
+  el.innerHTML = NAMES.map(n => `<span><i style="border-color:${COLOUR[n]}"></i>${esc(label(n))}</span>`).join('');
+});
+
+// ---------- standings ----------
+function renderTable() {
+  const maxWin = Math.max(...NAMES.map(n => M[n].win[LAST]));
+  const head = `<tr><th>#</th><th class="l">Manager</th><th>Total</th><th>GW${GWS[LAST]}</th><th>Behind</th><th>Win chance</th><th>On form</th><th>Avg / wk</th><th>Form</th><th>Hits</th></tr>`;
+  const rows = order.map((n, i) => {
+    const m = M[n];
+    const prevWin = m.win[LAST - 1];
+    const d = m.delta[m.delta.length - 1];
+    const arrow = d > 0 ? `<span class="up" title="Up ${(d * 100).toFixed(1)} pts since GW${GWS[LAST - 1]}">▲</span>` : d < 0 ? `<span class="down" title="Down ${(Math.abs(d) * 100).toFixed(1)} pts since GW${GWS[LAST - 1]}">▼</span>` : '';
+    const hits = m.hits.reduce((a, b) => a + b, 0);
+    const behind = m.behind[LAST];
+    return `<tr data-mgr="${n}">
+      <td class="pos">${i + 1}</td>
+      <td class="mgr l"><i style="background:${COLOUR[n]}"></i><span>${esc(label(n))}<br><small>${esc(META.teams[n] || '')}</small></span></td>
+      <td><b>${m.total[LAST]}</b></td><td>${m.points[LAST]}</td><td>${behind === 0 ? '—' : '−' + behind}</td>
+      <td>${arrow} ${pct(m.win[LAST])}<span class="bar" style="width:${Math.round(48 * m.win[LAST] / maxWin)}px;background:${COLOUR[n]}"></span></td>
+      <td>${pct(m.win_form[LAST])}</td>
+      <td>${fmt(m.mean[LAST], 1)}</td><td>${fmt(m.ewma[LAST], 1)}</td>
+      <td>${hits ? '−' + hits : '0'}</td></tr>`;
+  }).join('');
+  document.getElementById('standings').innerHTML = `<thead>${head}</thead><tbody>${rows}</tbody>`;
+}
+
+// ---------- chart helpers ----------
+const NS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs = {}, parent) {
+  const el = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  if (parent) parent.appendChild(el);
+  return el;
+}
+function niceTicks(lo, hi, n = 5) {
+  const span = hi - lo || 1;
+  const raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(s => s * mag).find(s => span / s <= n) || 10 * mag;
+  const t = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) t.push(+v.toFixed(10));
+  return t;
+}
+function tooltip(host) {
+  let t = host.querySelector('.tip');
+  if (!t) { t = document.createElement('div'); t.className = 'tip'; t.hidden = true; host.appendChild(t); }
+  return t;
+}
+function placeTip(tip, host, px, py) {
+  const hw = host.clientWidth;
+  tip.hidden = false;
+  const w = tip.offsetWidth;
+  let left = px + 14; if (left + w > hw - 4) left = px - w - 14; if (left < 4) left = 4;
+  tip.style.left = left + 'px'; tip.style.top = Math.max(4, py - 20) + 'px';
+}
+
+function lineChart(id, opts) {
+  const host = document.getElementById(id);
+  host.style.position = 'relative';
+  host.querySelectorAll('svg').forEach(s => s.remove());
+  const W = Math.max(300, host.clientWidth), H = opts.height || Math.round(Math.min(320, Math.max(220, W * 0.42)));
+  const pad = { l: 44, r: 12, t: 10, b: 30 };
+  const xs = opts.x, series = opts.series;
+  const vals = series.flatMap(s => s.values).filter(v => v != null);
+  let lo = opts.yMin ?? Math.min(...vals), hi = opts.yMax ?? Math.max(...vals);
+  const ticks = niceTicks(lo, hi, 5); lo = Math.min(lo, ticks[0]); hi = Math.max(hi, ticks[ticks.length - 1]);
+  const X = i => pad.l + (xs.length === 1 ? 0 : i * (W - pad.l - pad.r) / (xs.length - 1));
+  const Y = v => pad.t + (hi - v) * (H - pad.t - pad.b) / (hi - lo || 1);
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': opts.aria });
+  host.prepend(svg);
+  for (const t of ticks) {
+    svgEl('line', { x1: pad.l, x2: W - pad.r, y1: Y(t), y2: Y(t), class: t === 0 ? 'zero' : 'gridline' }, svg);
+    svgEl('text', { x: pad.l - 8, y: Y(t) + 4, 'text-anchor': 'end' }, svg).textContent = opts.yFmt(t);
+  }
+  xs.forEach((g, i) => { svgEl('text', { x: X(i), y: H - 10, 'text-anchor': 'middle' }, svg).textContent = 'GW' + g; });
+  for (const s of series) {
+    const pts = s.values.map((v, i) => v == null ? null : [X(i), Y(v)]).filter(Boolean);
+    const g = svgEl('g', { 'data-mgr': s.name }, svg);
+    svgEl('path', { d: 'M' + pts.map(p => p.join(',')).join('L'), class: 'series', style: `stroke:${s.color}` }, g);
+    const lastP = pts[pts.length - 1];
+    if (lastP) svgEl('circle', { cx: lastP[0], cy: lastP[1], r: 4, class: 'dot', style: `fill:${s.color}` }, g);
+  }
+  const xh = svgEl('line', { y1: pad.t, y2: H - pad.b, class: 'xhair', visibility: 'hidden' }, svg);
+  const hover = svgEl('g', {}, svg);
+  const tip = tooltip(host);
+  const hit = svgEl('rect', { x: pad.l - 10, y: 0, width: W - pad.l - pad.r + 20, height: H, fill: 'transparent' }, svg);
+  const move = ev => {
+    const r = svg.getBoundingClientRect();
+    const px = (ev.clientX - r.left) * W / r.width;
+    const i = Math.max(0, Math.min(xs.length - 1, Math.round((px - pad.l) / ((W - pad.l - pad.r) / Math.max(1, xs.length - 1)))));
+    xh.setAttribute('x1', X(i)); xh.setAttribute('x2', X(i)); xh.setAttribute('visibility', 'visible');
+    hover.innerHTML = '';
+    const rows = series.map(s => [s, s.values[i]]).filter(([, v]) => v != null).sort((a, b) => opts.sortAsc ? a[1] - b[1] : b[1] - a[1]);
+    for (const [s, v] of rows) if (!focus || focus === s.name) svgEl('circle', { cx: X(i), cy: Y(v), r: 4.5, class: 'dot', style: `fill:${s.color}` }, hover);
+    tip.innerHTML = `<h4>Gameweek ${xs[i]}</h4>` + rows.map(([s, v]) =>
+      `<div class="row" style="${focus && focus !== s.name ? 'opacity:.45' : ''}"><span><i style="background:${s.color}"></i>${esc(label(s.name))}</span><b>${opts.tipFmt(v)}</b></div>`).join('');
+    placeTip(tip, host, X(i) * r.width / W, ev.clientY - host.getBoundingClientRect().top);
+  };
+  hit.addEventListener('pointermove', move);
+  hit.addEventListener('pointerdown', move);
+  hit.addEventListener('pointerleave', () => { tip.hidden = true; xh.setAttribute('visibility', 'hidden'); hover.innerHTML = ''; });
+}
+
+function deltaChart(id) {
+  const host = document.getElementById(id);
+  host.style.position = 'relative';
+  host.querySelectorAll('svg').forEach(s => s.remove());
+  const gws = M[NAMES[0]].delta_gws;
+  const W = Math.max(300, host.clientWidth), H = Math.round(Math.min(320, Math.max(220, W * 0.42)));
+  const pad = { l: 44, r: 12, t: 10, b: 30 };
+  let up = 0, dn = 0;
+  gws.forEach((_, i) => {
+    const vs = NAMES.map(n => M[n].delta[i] || 0);
+    up = Math.max(up, vs.filter(v => v > 0).reduce((a, b) => a + b, 0));
+    dn = Math.min(dn, vs.filter(v => v < 0).reduce((a, b) => a + b, 0));
+  });
+  const ticks = niceTicks(dn, up, 6);
+  const lo = Math.min(dn, ticks[0]), hi = Math.max(up, ticks[ticks.length - 1]);
+  const Y = v => pad.t + (hi - v) * (H - pad.t - pad.b) / (hi - lo || 1);
+  const band = (W - pad.l - pad.r) / gws.length, bw = Math.min(56, band * 0.55);
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Change in win chance by gameweek' });
+  host.prepend(svg);
+  for (const t of ticks) {
+    svgEl('line', { x1: pad.l, x2: W - pad.r, y1: Y(t), y2: Y(t), class: t === 0 ? 'zero' : 'gridline' }, svg);
+    svgEl('text', { x: pad.l - 8, y: Y(t) + 4, 'text-anchor': 'end' }, svg).textContent = (t > 0 ? '+' : '') + Math.round(t * 100) + '%';
+  }
+  const tip = tooltip(host);
+  gws.forEach((g, i) => {
+    const cx = pad.l + band * (i + 0.5);
+    svgEl('text', { x: cx, y: H - 10, 'text-anchor': 'middle' }, svg).textContent = 'GW' + g;
+    let posBase = 0, negBase = 0;
+    const segs = NAMES.map(n => [n, M[n].delta[i] || 0]).filter(([, v]) => v !== 0);
+    for (const [n, v] of segs) {
+      const a = v > 0 ? posBase : negBase, b = a + v;
+      if (v > 0) posBase = b; else negBase = b;
+      const y1 = Y(Math.max(a, b)), y2 = Y(Math.min(a, b));
+      const h = Math.max(0, y2 - y1 - 2);
+      const rect = svgEl('rect', { x: cx - bw / 2, y: v > 0 ? y1 : y1 + 2, width: bw, height: h, rx: 2, style: `fill:${COLOUR[n]}`, 'data-mgr': n }, svg);
+      rect.addEventListener('pointerenter', ev => {
+        const others = segs.slice().sort((p, q) => q[1] - p[1]);
+        tip.innerHTML = `<h4>GW${g - 1} → GW${g}</h4>` + others.map(([m, d]) =>
+          `<div class="row" style="${m === n ? 'font-weight:600' : 'opacity:.7'}"><span><i style="background:${COLOUR[m]}"></i>${esc(label(m))}</span><b>${d > 0 ? '+' : '−'}${Math.abs(d * 100).toFixed(1)} pts</b></div>`).join('')
+          + (others.length < NAMES.length ? `<div class="row" style="opacity:.6"><span>Others</span><b>within noise</b></div>` : '');
+        const hr = host.getBoundingClientRect();
+        placeTip(tip, host, ev.clientX - hr.left, ev.clientY - hr.top);
+      });
+      rect.addEventListener('pointerleave', () => { tip.hidden = true; });
+    }
+  });
+}
+
+
+function heatmap() {
+  const n = NAMES.length;
+  const head = `<tr><th class="l">Manager</th>${Array.from({ length: n }, (_, i) => `<th style="text-align:center">${ordinal(i + 1)}</th>`).join('')}<th>Most likely</th></tr>`;
+  const rows = order.map(name => {
+    const rp = M[name].rank_prob;
+    let best = 1;
+    const cells = Array.from({ length: n }, (_, i) => {
+      const p = rp[i + 1] || 0;
+      if (p > (rp[best] || 0)) best = i + 1;
+      const strong = p >= 0.32;
+      return `<td class="cell" style="background:color-mix(in oklab, var(--seq) ${Math.round(Math.min(1, p / 0.5) * 85)}%, var(--surface));color:${strong ? 'var(--surface)' : 'var(--ink)'}" title="${esc(label(name))} finishes ${ordinal(i + 1)} in ${pct(p, 1)} of simulations">${p < 0.005 ? '·' : Math.round(p * 100)}</td>`;
+    }).join('');
+    return `<tr data-mgr="${name}"><td class="mgr l"><i style="background:${COLOUR[name]}"></i>${esc(label(name))}</td>${cells}<td>${ordinal(best)}</td></tr>`;
+  }).join('');
+  document.getElementById('heat').innerHTML = `<thead>${head}</thead><tbody>${rows}</tbody>`;
+}
+function ordinal(k) { const s = ['th', 'st', 'nd', 'rd'], v = k % 100; return k + (s[(v - 20) % 10] || s[v] || s[0]); }
+
+// ---------- gameweek by gameweek ----------
+const GW_DATA = DATA.gameweeks || {};
+const GW_LIST = Object.keys(GW_DATA).map(Number).sort((a, b) => b - a);
+let currentGw = GW_LIST[0];
+const signed = v => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v);
+
+function transferCell(r) {
+  if (!r.transfers.length) return '<span class="note">None</span>';
+  const line = t => `<div><span class="pl">${esc(t.out)} <span class="pts">${t.out_points}</span></span> → <span class="pl">${esc(t.in)} <span class="pts">${t.in_points}</span></span></div>`;
+  const shown = r.transfers.length > 3 ? r.transfers.slice(0, 2) : r.transfers;
+  let html = shown.map(line).join('');
+  if (r.transfers.length > 3) html += `<details><summary>${r.transfers.length - 2} more changes</summary>${r.transfers.slice(2).map(line).join('')}</details>`;
+  const hit = r.hit ? ` <span class="note">after −${r.hit} hit</span>` : '';
+  return `<div class="moves">${html}<div><span class="net ${r.transfer_net > 0 ? 'up' : r.transfer_net < 0 ? 'down' : ''}">${signed(r.transfer_net)}</span> <span class="note">that week</span>${hit}</div></div>`;
+}
+
+function renderGameweek(gw) {
+  currentGw = gw;
+  document.querySelectorAll('.gwtab').forEach(b => b.setAttribute('aria-selected', String(Number(b.dataset.gw) === gw)));
+  document.getElementById('commentary').innerHTML = (META.commentary || {})[gw] || '<p class="sub">No write-up for this week yet.</p>';
+  const rows = GW_DATA[gw];
+  const names = Object.keys(rows).sort((a, b) => rows[b].net_points - rows[a].net_points);
+  const head = '<tr><th class="l">Manager</th><th style="text-align:right">Pts</th><th>Star</th><th>Captain</th><th>Transfers</th><th>Benched</th></tr>';
+  const body = names.map(n => {
+    const r = rows[n];
+    const cap = r.captain.player ? `<span class="pl">${esc(r.captain.player)} <span class="pts">${r.captain.points}</span></span>${r.captain.vice_stood_in ? '<div class="note">vice stood in</div>' : ''}` : '<span class="note">—</span>';
+    const missed = r.missed.length ? r.missed.map(m => `<div class="pl">${esc(m.player)} <span class="pts">${m.points}</span></div>`).join('') : '<span class="note">—</span>';
+    return `<tr data-mgr="${n}">
+      <td class="mgr l"><i style="background:${COLOUR[n]}"></i><span>${esc(label(n))}${r.chip ? `<span class="badge">${esc(r.chip)}</span>` : ''}</span></td>
+      <td class="score">${r.points}${r.hit ? `<small>−${r.hit} hit</small>` : ''}</td>
+      <td><span class="pl">${esc(r.star.player)} <span class="pts">${r.star.points}</span></span></td>
+      <td>${cap}</td><td>${transferCell(r)}</td><td>${missed}</td></tr>`;
+  }).join('');
+  document.getElementById('gwtable').innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+  applyFocus();
+}
+
+const tabs = document.getElementById('gwtabs');
+for (const gw of GW_LIST) {
+  const b = document.createElement('button');
+  b.className = 'gwtab'; b.type = 'button'; b.dataset.gw = gw; b.textContent = 'GW' + gw;
+  b.addEventListener('click', () => renderGameweek(gw));
+  tabs.appendChild(b);
+}
+if (!GW_LIST.length) document.getElementById('gameweeks').hidden = true;
+
+function renderSeasonTransfers() {
+  const st = DATA.season_transfers;
+  if (!st) { document.getElementById('transfers').hidden = true; return; }
+  const names = Object.keys(st).sort((a, b) => st[b].gain - st[a].gain);
+  const net = v => `<span class="net ${v > 0 ? 'up' : v < 0 ? 'down' : ''}">${signed(v)}</span>`;
+  const move = m => m ? `<span class="pl">${esc(m.out)} → ${esc(m.in)}</span> <span class="net ${m.gain > 0 ? 'up' : 'down'}">${signed(m.gain)}</span><div class="note">GW${m.gw}, ${m.in_points} v ${m.out_points} over ${m.weeks} wk${m.weeks === 1 ? '' : 's'}</div>` : '<span class="note">—</span>';
+  const head = '<tr><th class="l">Manager</th><th style="text-align:right">Moves</th><th style="text-align:right">Hits</th><th style="text-align:right">Transfers</th><th style="text-align:right">Chip squads</th><th style="text-align:right">Total</th><th>Best move</th><th>Worst move</th><th>Chips used</th></tr>';
+  const body = names.map(n => {
+    const r = st[n];
+    const chips = r.chips.length ? r.chips.map(c => `<div class="pl">${esc(c.chip)} <span class="pts">GW${c.gw}</span></div>`).join('') : '<span class="note">None yet</span>';
+    const chipSquads = r.moves.some(m => m.chip) ? net(r.gain_chips) : '<span class="note">—</span>';
+    return `<tr data-mgr="${n}">
+      <td class="mgr l"><i style="background:${COLOUR[n]}"></i>${esc(label(n))}</td>
+      <td class="num" style="text-align:right">${r.transfers}</td>
+      <td class="num" style="text-align:right">${r.hits ? '−' + r.hits : '0'}</td>
+      <td style="text-align:right">${net(r.gain_regular)}</td>
+      <td style="text-align:right">${chipSquads}</td>
+      <td class="score">${signed(r.gain)}</td>
+      <td>${move(r.best)}</td><td>${move(r.worst)}</td><td>${chips}</td></tr>`;
+  }).join('');
+  document.getElementById('season-transfers').innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+}
+
+// ---------- insights ----------
+const INS = DATA.insights;
+const CHIP_SHORT = { wildcard: 'WC', freehit: 'FH', bboost: 'BB', '3xc': 'TC' };
+const CHIP_NAME = { wildcard: 'Wildcard', freehit: 'Free hit', bboost: 'Bench boost', '3xc': 'Triple captain' };
+let gapPeriod = 'season';
+
+// Each manager's captain points minus the average of the other managers' captains that week.
+function captainVsRivals() {
+  const cap = INS.captaincy, names = Object.keys(cap);
+  const weeks = cap[names[0]].weeks.length;
+  const out = Object.fromEntries(names.map(n => [n, { total: 0, weeks: [] }]));
+  for (let i = 0; i < weeks; i++) {
+    const sum = names.reduce((a, n) => a + cap[n].weeks[i].points, 0);
+    for (const n of names) {
+      const others = (sum - cap[n].weeks[i].points) / (names.length - 1);
+      const diff = cap[n].weeks[i].points - others;
+      out[n].weeks.push({ diff, others });
+      out[n].total += diff;
+    }
+  }
+  return out;
+}
+
+function renderCaptaincy() {
+  const vs = captainVsRivals();
+  const rows = Object.entries(INS.captaincy).sort((a, b) => vs[b[0]].total - vs[a[0]].total);
+  const head = '<tr><th class="l">Manager</th><th style="text-align:right">Captain pts</th><th style="text-align:right">vs rivals</th><th style="text-align:right">Best available</th><th style="text-align:right">Lost</th><th>Chips by GW19</th><th>GW20–38</th></tr>';
+  const chipTag = c => `<span class="chiptag ${c.status}" title="${CHIP_NAME[c.chip]}${c.used_gw ? ', played GW' + c.used_gw : c.status === 'expired' ? ', expired' : ', available until GW' + c.stop}">${CHIP_SHORT[c.chip]}${c.used_gw ? ' GW' + c.used_gw : ''}</span>`;
+  const body = rows.map(([n, r]) => {
+    const slots = INS.chips[n];
+    const first = slots.filter(c => c.stop <= 19), second = slots.filter(c => c.start >= 20);
+    return `<tr data-mgr="${n}">
+      <td class="mgr l"><i style="background:${COLOUR[n]}"></i>${esc(label(n))}</td>
+      <td class="num" style="text-align:right">${r.points}</td>
+      <td style="text-align:right"><span class="net ${vs[n].total > 0.5 ? 'up' : vs[n].total < -0.5 ? 'down' : ''}">${signed(Math.round(vs[n].total))}</span></td>
+      <td class="num" style="text-align:right">${r.best}</td>
+      <td class="score" style="font-size:16px">${r.lost ? '−' + r.lost : '0'}</td>
+      <td><div class="chipset">${first.map(chipTag).join('')}</div></td>
+      <td><div class="chipset">${second.map(chipTag).join('')}</div></td></tr>`;
+  }).join('');
+  document.getElementById('captaincy-table').innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+
+  const gws = INS.captaincy[rows[0][0]].weeks.map(w => w.gw);
+  const popular = gws.map(gw => INS.most_captained[gw]);
+  const weekHead = `<tr><th class="l">Manager</th>${gws.map(g => `<th style="text-align:center">GW${g}</th>`).join('')}</tr>`
+    + `<tr><td class="l note">Most picked</td>${popular.map(p => `<td class="heatcell note">${p && p.managers > 1 ? `${esc(p.player)}<small>${p.managers} of ${NAMES.length}</small>` : 'No consensus'}</td>`).join('')}</tr>`;
+  const weekBody = rows.map(([n, r]) => `<tr data-mgr="${n}"><td class="mgr l"><i style="background:${COLOUR[n]}"></i>${esc(label(n))}</td>${r.weeks.map((w, i) => {
+    const d = vs[n].weeks[i].diff;
+    const share = Math.round(Math.min(1, Math.abs(d) / 20) * 50);
+    const tone = d > 0 ? 'var(--win)' : 'var(--loss)';
+    const bg = Math.abs(d) < 0.5 ? 'var(--surface)' : `color-mix(in oklab, ${tone} ${share}%, var(--surface))`;
+    const title = `${label(n)} GW${w.gw}: ${w.captain || 'no captain'} ${w.points}; rivals averaged ${vs[n].weeks[i].others.toFixed(1)}`;
+    return `<td class="heatcell" style="background:${bg}" title="${esc(title)}">${esc(w.captain || '—')}<small>${w.points} pts · ${signed(Math.round(d))}</small></td>`;
+  }).join('')}</tr>`).join('');
+  document.getElementById('captaincy-weeks').innerHTML = `<thead>${weekHead}</thead><tbody>${weekBody}</tbody>`;
+}
+
+function renderGap() {
+  const leader = INS.leader;
+  const rows = Object.entries(INS.gap).filter(([, g]) => g).map(([n, g]) => [n, g[gapPeriod]])
+    .sort((a, b) => b[1].gap - a[1].gap);
+  const recentN = Object.values(INS.gap).find(Boolean)?.recent_gws;
+  document.getElementById('gap-sub').textContent = `Each manager against ${label(leader)}, the current leader. Players both start cancel out; what's left is points from players only one of you started, the captaincy difference, and hits. The three always add up to the points gap${gapPeriod === 'recent' ? ` over the last ${recentN} gameweeks` : ''}.`;
+  let maxAbs = 1;
+  for (const [, g] of rows) {
+    const parts = [g.unique, g.captaincy, g.hits];
+    maxAbs = Math.max(maxAbs, parts.filter(v => v > 0).reduce((a, b) => a + b, 0), -parts.filter(v => v < 0).reduce((a, b) => a + b, 0));
+  }
+  const pos = v => 50 + (v / maxAbs) * 48;
+  const html = rows.map(([n, g]) => {
+    let up = 0, down = 0;
+    const segs = [['unique', g.unique, 'var(--ink-2)'], ['captaincy', g.captaincy, 'var(--seq)'], ['hits', g.hits, 'var(--loss)']].filter(([, v]) => v).map(([k, v, c]) => {
+      const a = v > 0 ? up : down, b = a + v;
+      if (v > 0) up = b; else down = b;
+      const left = Math.min(pos(a), pos(b)), width = Math.abs(pos(b) - pos(a));
+      return `<div class="seg" style="left:${left}%;width:calc(${width}% - 2px);margin-left:1px;background:${c}" title="${k}: ${signed(v)}"></div>`;
+    }).join('');
+    const full = INS.gap[n];
+    const diffs = gapPeriod === 'season' && full.only_mine.length
+      ? `Only ${esc(label(n))}: ${full.only_mine.map(esc).join(', ')} · Only ${esc(label(leader))}: ${full.only_theirs.map(esc).join(', ')}` : '';
+    return `<div class="gaprow" data-mgr="${n}">
+      <div class="who"><i style="background:${COLOUR[n]}"></i>${esc(label(n))}</div>
+      <div class="track" title="Players ${signed(g.unique)} · captaincy ${signed(g.captaincy)} · hits ${signed(g.hits)}"><div class="axis" style="left:50%"></div>${segs}</div>
+      <div class="total">${signed(g.gap)}</div>
+      ${diffs ? `<div class="diffs">${diffs}</div>` : ''}</div>`;
+  }).join('');
+  document.getElementById('gaprows').innerHTML = html;
+  document.getElementById('gap-season').setAttribute('aria-pressed', String(gapPeriod === 'season'));
+  document.getElementById('gap-recent').setAttribute('aria-pressed', String(gapPeriod === 'recent'));
+  applyFocus();
+}
+document.getElementById('gap-season').addEventListener('click', () => { gapPeriod = 'season'; renderGap(); });
+document.getElementById('gap-recent').addEventListener('click', () => { gapPeriod = 'recent'; renderGap(); });
+
+function renderOutlook() {
+  const entries = Object.entries(INS.outlook);
+  const gws = entries[0][1].map(w => w.gw);
+  const avg = weeks => { const d = weeks.map(w => w.difficulty).filter(v => v != null); return d.length ? d.reduce((a, b) => a + b, 0) / d.length : null; };
+  entries.sort((a, b) => avg(a[1]) - avg(b[1]));
+  document.getElementById('outlook-sub').textContent = `FPL's own fixture difficulty (1 easiest, 5 hardest), averaged over each manager's 15 players as of GW${GWS[LAST]}. Squads change at each deadline, and picks stay private until then. Easiest run first.`;
+  const cell = w => {
+    if (w.difficulty == null) return '<td class="heatcell"><span class="note">blank</span></td>';
+    // Squad averages sit around 2.5-4, so the shade spans that range rather than the full 1-5 scale.
+    const share = Math.round(Math.max(0, Math.min(1, (w.difficulty - 2.5) / 1.5)) * 75);
+    const notes = [w.doubles ? `${w.doubles} double` : '', w.blanks ? `${w.blanks} blank` : ''].filter(Boolean).join(' · ');
+    return `<td class="heatcell" style="background:color-mix(in oklab, var(--seq) ${share}%, var(--surface));color:${share > 45 ? 'var(--surface)' : 'var(--ink)'}">${w.difficulty.toFixed(1)}${notes ? `<small>${notes}</small>` : ''}</td>`;
+  };
+  const head = `<tr><th class="l">Manager</th>${gws.map(g => `<th style="text-align:center">GW${g}</th>`).join('')}<th style="text-align:right">Average</th></tr>`;
+  const body = entries.map(([n, weeks]) => `<tr data-mgr="${n}"><td class="mgr l"><i style="background:${COLOUR[n]}"></i>${esc(label(n))}</td>${weeks.map(cell).join('')}<td class="score" style="font-size:16px">${avg(weeks)?.toFixed(2) ?? '–'}</td></tr>`).join('');
+  document.getElementById('outlook-table').innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+}
+
+function renderBench() {
+  const rows = Object.entries(INS.bench).sort((a, b) => b[1].bench_unused - a[1].bench_unused);
+  const head = '<tr><th class="l">Manager</th><th style="text-align:right">Bench points unused</th><th style="text-align:right">Auto-subs</th><th style="text-align:right">Points they brought</th></tr>';
+  const body = rows.map(([n, r]) => `<tr data-mgr="${n}"><td class="mgr l"><i style="background:${COLOUR[n]}"></i>${esc(label(n))}</td><td class="score" style="font-size:16px">${r.bench_unused}</td><td class="num" style="text-align:right">${r.autosubs}</td><td class="num" style="text-align:right">${r.autosub_points}</td></tr>`).join('');
+  document.getElementById('bench-table').innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+}
+
+function renderH2H() {
+  const grid = INS.h2h;
+  const names = [...order];
+  const head = `<tr><th>v</th>${names.map(n => `<th title="${esc(label(n))}">${esc(label(n))}</th>`).join('')}<th>W–D–L</th></tr>`;
+  const body = names.map(a => {
+    let w = 0, d = 0, l = 0;
+    const cells = names.map(b => {
+      if (a === b) return '<td class="self">·</td>';
+      const [cw, cd, cl] = grid[a][b];
+      w += cw; d += cd; l += cl;
+      const net = cw - cl, games = cw + cd + cl || 1;
+      const tone = net > 0 ? 'var(--win)' : net < 0 ? 'var(--loss)' : 'var(--surface)';
+      const share = Math.round(Math.abs(net) / games * 55);
+      return `<td class="num" style="background:color-mix(in oklab, ${tone} ${share}%, var(--surface))" title="${esc(label(a))} v ${esc(label(b))}: ${cw} won, ${cd} drawn, ${cl} lost">${cw}–${cl}</td>`;
+    }).join('');
+    return `<tr data-mgr="${a}"><td class="mgr l"><i style="background:${COLOUR[a]}"></i>${esc(label(a))}</td>${cells}<td class="num"><b>${w}–${d}–${l}</b></td></tr>`;
+  }).join('');
+  document.getElementById('h2h-table').innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+}
+
+function renderInsights() {
+  if (!INS) { ['captaincy', 'gap', 'outlook', 'bench', 'h2h'].forEach(id => { document.getElementById(id).hidden = true; }); return; }
+  renderCaptaincy(); renderGap(); renderOutlook(); renderBench(); renderH2H();
+}
+
+function renderAll() {
+  renderTable();
+  const ser = key => NAMES.map(n => ({ name: n, color: COLOUR[n], values: M[n][key] }));
+  lineChart('ch-win', { x: DATA.win_gws, series: ser('win'), yMin: 0, yFmt: t => Math.round(t * 100) + '%', tipFmt: v => pct(v, 1), aria: 'Win chance by gameweek' });
+  deltaChart('ch-delta');
+  lineChart('ch-behind', { x: GWS, series: ser('behind').map(s => ({ ...s, values: s.values.map(v => -v) })), yMax: 0, yFmt: t => t === 0 ? '0' : '−' + Math.abs(t), tipFmt: v => v === 0 ? 'leader' : '−' + Math.abs(v), aria: 'Points behind leader by gameweek' });
+  lineChart('ch-weekly', { x: GWS, series: ser('points'), yMin: 0, yFmt: t => String(t), tipFmt: v => v + ' pts', aria: 'Gameweek scores' });
+  heatmap();
+  if (currentGw) renderGameweek(currentGw);
+  renderSeasonTransfers();
+  renderInsights();
+  applyFocus();
+}
+
+document.getElementById('provisional').textContent = META.provisional;
+document.getElementById('footer').textContent = `League ${DATA.league_id} · data pulled ${META.pulled} · ${DATA.n_iter.toLocaleString()} simulations per gameweek · same model as FPL.ipynb`;
+renderAll();
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderAll, 150); });
+</script>

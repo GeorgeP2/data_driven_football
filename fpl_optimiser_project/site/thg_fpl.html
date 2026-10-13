@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>THG Ing League</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: a mown-pitch masthead with the race summary, then one column of charts read top to bottom
+   in the notebook's order — who leads, who moved, whether the gap is closable, how it finishes. */
+:root {
+  --bg: #f3f6f2; --surface: #fcfdfb; --ink: #17211b; --ink-2: #47544c; --muted: #75837a;
+  --rule: #dbe2dc; --grid: #e8ede8; --accent: #0f6b3c; --stripe-a: #e6eee6; --stripe-b: #edf3ec;
+  --seq: #2a5bd7; --neutral-line: #6b766f; --win: #1d7f4e; --loss: #c0392b;
+  --c0: #2a78d6; --c1: #eb6834; --c2: #1baf7a; --c3: #eda100; --c4: #e87ba4;
+  --c5: #008300; --c6: #8e5cd9; --c7: #a0522d; --c8: #00a3c4; --c9: #c0392b;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1511; --surface: #151d18; --ink: #e7eee9; --ink-2: #b3c0b7; --muted: #7f8e85;
+  --rule: #29342d; --grid: #1f2923; --accent: #56c48a; --stripe-a: #131b16; --stripe-b: #17211a;
+  --seq: #6f9cf0; --neutral-line: #a3aea7; --win: #4fb985; --loss: #e06a5c;
+  --c0: #3b86e0; --c1: #d0592a; --c2: #1baf7a; --c3: #b88600; --c4: #c6668f;
+  --c5: #1a9a1a; --c6: #9a6ae2; --c7: #b0623a; --c8: #00a3c4; --c9: #d04a3c;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0f1511; --surface: #151d18; --ink: #e7eee9; --ink-2: #b3c0b7; --muted: #7f8e85;
+  --rule: #29342d; --grid: #1f2923; --accent: #56c48a; --stripe-a: #131b16; --stripe-b: #17211a;
+  --seq: #6f9cf0; --neutral-line: #a3aea7; --win: #4fb985; --loss: #e06a5c;
+  --c0: #3b86e0; --c1: #d0592a; --c2: #1baf7a; --c3: #b88600; --c4: #c6668f;
+  --c5: #1a9a1a; --c6: #9a6ae2; --c7: #b0623a; --c8: #00a3c4; --c9: #d04a3c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 0 48px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+.num { font-variant-numeric: tabular-nums; }
+
+.masthead {
+  background: repeating-linear-gradient(90deg, var(--stripe-a) 0 56px, var(--stripe-b) 56px 112px);
+  border-bottom: 1px solid var(--rule);
+}
+.masthead .wrap { padding-block: 28px 24px; display: grid; gap: 14px; }
+.eyebrow { font-family: var(--font-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; font-size: 13px; color: var(--accent); }
+h1 { font-size: clamp(38px, 7vw, 60px); line-height: 0.95; text-transform: uppercase; }
+.lede { font-size: 17px; max-width: 62ch; color: var(--ink-2); margin: 0; }
+.lede b { color: var(--ink); font-weight: 600; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 4px; }
+.tile { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 14px; min-width: 0; }
+.tile .k { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.tile .v { font-family: var(--font-display); font-weight: 700; font-size: 30px; line-height: 1.1; }
+.tile .s { font-size: 13px; color: var(--ink-2); }
+
+.focusbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--rule); }
+.focusbar .wrap { padding-block: 10px; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.focusbar .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-right: 4px; }
+.chip { font: inherit; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: 999px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); cursor: pointer; }
+.chip i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.chip[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); font-weight: 600; }
+.chip:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip.clear { color: var(--muted); }
+
+section { padding-top: 36px; display: grid; gap: 10px; }
+section > header { display: grid; gap: 4px; }
+h2 { font-size: 28px; text-transform: uppercase; }
+.sub { color: var(--ink-2); margin: 0; max-width: 68ch; }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 14px 10px; position: relative; min-width: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid; }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--grid); }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; border-bottom-color: var(--rule); vertical-align: bottom; }
+th:first-child, td:first-child, th.l, td.l { text-align: left; }
+td.mgr { display: flex; align-items: center; gap: 8px; }
+td.mgr i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+td.mgr small { color: var(--muted); font-size: 12px; }
+td.pos { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--muted); }
+tr.dim td { opacity: 0.35; }
+tr.hl td { background: color-mix(in srgb, var(--seq) 8%, transparent); }
+.bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--ink-2); vertical-align: middle; margin-left: 8px; }
+.up { color: var(--accent); } .down { color: var(--c9); }
+
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--muted); font-family: var(--font-body); font-size: 12px; }
+svg .axis-title { fill: var(--ink-2); }
+svg .gridline { stroke: var(--grid); stroke-width: 1; }
+svg .zero { stroke: var(--neutral-line); stroke-width: 1; }
+svg .series { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; transition: opacity .15s; }
+svg .dot { stroke: var(--surface); stroke-width: 2; }
+svg .dimmed { opacity: 0.15; }
+svg .xhair { stroke: var(--neutral-line); stroke-dasharray: 3 3; }
+
+.tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); border-radius: 6px; padding: 8px 10px; font-size: 13px; box-shadow: 0 4px 16px rgb(0 0 0 / 0.12); min-width: 150px; z-index: 3; }
+.tip h4 { margin: 0 0 4px; font-family: var(--font-display); font-size: 15px; text-transform: uppercase; letter-spacing: 0.04em; }
+.tip .row { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+.tip .row span:first-child { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+.tip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+
+.heat td.cell { text-align: center; min-width: 46px; font-size: 13px; }
+.notes { color: var(--ink-2); font-size: 14px; max-width: 70ch; }
+.notes p { margin: 0 0 10px; }
+footer { color: var(--muted); font-size: 13px; padding-top: 32px; }
+.gwtabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.gwtab { font: inherit; font-family: var(--font-display); font-weight: 600; font-size: 16px; letter-spacing: 0.04em; padding: 4px 12px; border-radius: 6px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.gwtab[aria-selected="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.commentary { font-size: 16px; max-width: 68ch; display: grid; gap: 8px; }
+.commentary p { margin: 0; }
+.commentary b { font-weight: 600; }
+.gwtable td.mgr { display: table-cell; white-space: nowrap; }
+.gwtable td.mgr i { display: inline-block; margin-right: 8px; }
+.gwtable td { vertical-align: top; white-space: normal; text-align: left; }
+.gwtable th { text-align: left; }
+.gwtable td.score { text-align: right; white-space: nowrap; font-family: var(--font-display); font-weight: 700; font-size: 18px; }
+.gwtable td.score small { display: block; font-family: var(--font-body); font-weight: 500; font-size: 12px; color: var(--c9); }
+.gwtable .pl { white-space: nowrap; }
+.gwtable .pts { color: var(--muted); font-variant-numeric: tabular-nums; }
+.gwtable .note { color: var(--muted); font-size: 12px; }
+.gwtable .moves { display: grid; gap: 2px; min-width: 210px; }
+.gwtable .net { font-weight: 600; font-variant-numeric: tabular-nums; }
+.gwtable details summary { cursor: pointer; color: var(--ink-2); font-size: 13px; }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--ink-2); color: var(--ink); margin-left: 6px; white-space: nowrap; }
+.chipset { display: flex; flex-wrap: wrap; gap: 4px; }
+.chiptag { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--ink-2); color: var(--ink); white-space: nowrap; }
+.chiptag.used { border-style: dashed; color: var(--muted); border-color: var(--rule); text-decoration: line-through; }
+.chiptag.expired { color: var(--muted); border-color: var(--rule); opacity: 0.6; }
+.toggle { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.toggle button { font: inherit; font-size: 13px; padding: 4px 12px; border: 0; background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.toggle button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.gaprows { display: grid; gap: 14px; }
+.gaprow { display: grid; grid-template-columns: 84px minmax(0, 1fr) 52px; gap: 4px 10px; align-items: center; }
+.gaprow .who { display: flex; align-items: center; gap: 6px; font-weight: 500; }
+.gaprow .who i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.gaprow .track { position: relative; height: 18px; background: var(--grid); border-radius: 3px; }
+.gaprow .track .axis { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--neutral-line); }
+.gaprow .seg { position: absolute; top: 2px; bottom: 2px; border-radius: 2px; }
+.gaprow .total { font-family: var(--font-display); font-weight: 700; font-size: 18px; text-align: right; font-variant-numeric: tabular-nums; }
+.gaprow .diffs { grid-column: 2 / 4; font-size: 12px; color: var(--muted); min-width: 0; }
+.gaprow.dim { opacity: 0.35; }
+.swatch { display: inline-block; width: 12px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 5px; }
+.heatcell { text-align: center !important; font-variant-numeric: tabular-nums; min-width: 58px; }
+.heatcell small { display: block; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; }
+.h2h td, .h2h th { text-align: center; padding: 6px 8px; }
+.h2h td.mgr, .h2h th:first-child { text-align: left; }
+.h2h td.self { color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="masthead"><div class="wrap">
+  <div class="eyebrow" id="eyebrow"></div>
+  <h1 id="h1"></h1>
+  <p class="lede" id="lede"></p>
+  <div class="tiles" id="tiles"></div>
+</div></div>
+
+<div class="focusbar" aria-label="Highlight a manager"><div class="wrap" id="focusbar"><span class="lbl">Highlight</span></div></div>
+
+<div class="wrap">
+  <section id="table-sec">
+    <header><h2>Table</h2><p class="sub" id="table-sub">Points from the FPL API. Win chances come from 10,000 simulated finishes to GW38.</p></header>
+    <div class="panel tablewrap"><table id="standings"></table></div>
+  </section>
+
+  <section id="gameweeks">
+    <header><h2>Gameweek by gameweek</h2><p class="sub">What happened each week: the top scorer in every XI (captain points included), the armband, transfers as players out → in with that week's points, and anyone left on the bench who beat a starter in the same role by 2 or more.</p></header>
+    <div class="gwtabs" role="tablist" id="gwtabs"></div>
+    <div class="commentary" id="commentary"></div>
+    <div class="panel tablewrap"><table class="gwtable" id="gwtable"></table></div>
+  </section>
+
+  <section id="transfers">
+    <header><h2>Transfers so far</h2><p class="sub">Each signing is scored from the week it arrived until it was sold again, against what the player sold scored over the same weeks. Raw player points: captaincy and bench weeks are not separated. Free-hit signings count for their one week. Wildcard and free-hit squads are shown apart, because who replaced whom inside a chip week is matched by position, not chosen.</p></header>
+    <div class="panel tablewrap"><table class="gwtable" id="season-transfers"></table></div>
+  </section>
+
+  <section id="captaincy">
+    <header><h2>Captaincy and chips</h2><p class="sub">Captain points so far, against the average of everyone else's captains each week ("vs rivals") and against the best captain available from that week's XI. The best available is hindsight, and it is often a defender nobody would have captained. Chips come twice this season: one set to use by GW19 and a second for GW20–38. Struck-through chips are played.</p></header>
+    <div class="panel tablewrap"><table class="gwtable" id="captaincy-table"></table></div>
+    <p class="sub">Week by week: each manager's captain and the points it returned. Green beat that week's average of the other managers' captains, red fell short. The top row is the league's most-picked captain.</p>
+    <div class="panel tablewrap"><table class="gwtable" id="captaincy-weeks"></table></div>
+  </section>
+
+  <section id="gap">
+    <header><h2>Gap to the leader</h2><p class="sub" id="gap-sub"></p></header>
+    <div style="display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center">
+      <div class="toggle" role="group" aria-label="Period"><button type="button" id="gap-season" aria-pressed="true">Season</button><button type="button" id="gap-recent" aria-pressed="false">Last 5 GWs</button></div>
+      <div class="legend" style="margin:0"><span><span class="swatch" style="background:var(--ink-2)"></span>players the other doesn't own</span><span><span class="swatch" style="background:var(--seq)"></span>captaincy</span><span><span class="swatch" style="background:var(--loss)"></span>hits</span></div>
+    </div>
+    <div class="panel"><div class="gaprows" id="gaprows"></div></div>
+  </section>
+
+  <section id="outlook">
+    <header><h2>Next five gameweeks</h2><p class="sub" id="outlook-sub"></p></header>
+    <div class="panel tablewrap"><table class="gwtable" id="outlook-table"></table></div>
+  </section>
+
+  <section id="bench">
+    <header><h2>Bench and auto-subs</h2><p class="sub">Points left on the bench all season (bench boost weeks excluded), and points that came on through automatic substitutions.</p></header>
+    <div class="panel tablewrap"><table class="gwtable" id="bench-table"></table></div>
+  </section>
+
+  <section id="h2h">
+    <header><h2>Head to head</h2><p class="sub">Weeks each manager (row) outscored each rival (column), as wins–losses after hits. Draws count in the total.</p></header>
+    <div class="panel tablewrap"><table class="h2h" id="h2h-table"></table></div>
+  </section>
+
+  <section>
+    <header><h2>Chance of winning the league</h2><p class="sub">Re-simulated after every gameweek using only what was known then. Early weeks are wide open by design: a week's score varies by about 16 points either way.</p></header>
+    <div class="panel"><div class="legend" data-legend></div><div id="ch-win"></div></div>
+  </section>
+
+  <section>
+    <header><h2>Who moved the needle</h2><p class="sub">Week-on-week change in win chance. Gains stack above zero, losses below. Changes smaller than the simulation noise (Welch t-test, p&nbsp;&gt;&nbsp;0.05) are set to zero, so every bar is a real shift.</p></header>
+    <div class="panel"><div class="legend" data-legend></div><div id="ch-delta"></div></div>
+  </section>
+
+  <section>
+    <header><h2>Points behind the leader</h2><p class="sub">Distance to whoever was top that week. Zero is the leader.</p></header>
+    <div class="panel"><div class="legend" data-legend></div><div id="ch-behind"></div></div>
+  </section>
+
+  <section>
+    <header><h2>Gameweek scores</h2><p class="sub">Points each week before transfer hits, as FPL shows them. Hits come off the season total.</p></header>
+    <div class="panel"><div class="legend" data-legend></div><div id="ch-weekly"></div></div>
+  </section>
+
+
+  <section>
+    <header><h2>Where everyone finishes</h2><p class="sub">Share of 10,000 simulated seasons that end with each manager in each position. This is a separate run from the win-chance chart, so first-place figures can differ from it by about a point.</p></header>
+    <div class="panel tablewrap"><table class="heat" id="heat"></table></div>
+  </section>
+
+  <section class="notes">
+    <header><h2>How the numbers are made</h2></header>
+    <p>Each manager's weekly rate is their running average, pulled toward the league average with a prior worth a few gameweeks of evidence, and drawn each simulation with its standard error. Weekly scores are drawn from a normal distribution with a spread of 16 points, which is last season's within-manager variation. A Poisson model would give a spread of about 7.5 at 55 points and call early leads near-certain.</p>
+    <p>The form-adjusted chance in the table runs the same simulation on the exponentially weighted recent average instead of the season average. Where the two disagree, a manager's level has changed and the season average has not caught up.</p>
+    <p id="provisional"></p>
+  </section>
+  <footer id="footer"></footer>
+</div>
+
+<script>
+const DATA = {"league": "thg", "league_id": 1496795, "gws": [1, 2, 3, 4, 5, 6], "win_gws": [1, 2, 3, 4, 5, 6], "names": ["george", "michael", "eddie", "james", "andrew", "dom", "hickey", "andy", "saunders", "derek"], "n_iter": 10000, "managers": {"george": {"points": [46, 108, 43, 81, 27, 50], "total": [46, 154, 197, 278, 305, 355], "bench": [1, 0, 0, 0, 8, 3], "behind": [23, 19, 33, 37, 64, 92], "ewma": [46.0, 66.7, 58.8, 66.2, 53.1, 52.1], "mean": [46.0, 77.0, 65.7, 69.5, 61.0, 59.2], "transfers": [0, 0, 2, 1, 1, 1], "hits": [0, 0, 0, 0, 0, 0], "overall_rank": [5572584, 1568336, 2700348, 2118566, 4028622, 4797371], "win": [0.068, 0.087, 0.055, 0.049, 0.023, 0.013], "win_form": [0.068, 0.074, 0.046, 0.045, 0.014, 0.009], "delta": [0.019, -0.032, -0.006, -0.026, -0.01], "delta_gws": [2, 3, 4, 5, 6], "rank_prob": {"1": 0.011, "2": 0.022, "3": 0.033, "4": 0.044, "5": 0.066, "6": 0.09, "7": 0.124, "8": 0.172, "9": 0.223, "10": 0.213}}, "michael": {"points": [65, 105, 60, 84, 35, 57], "total": [65, 170, 230, 314, 349, 406], "bench": [0, 19, 10, 4, 12, 20], "behind": [4, 3, 0, 1, 20, 41], "ewma": [65.0, 78.3, 72.2, 76.1, 62.4, 60.6], "mean": [65.0, 85.0, 76.7, 78.5, 69.8, 67.7], "transfers": [0, 0, 2, 1, 0, 1], "hits": [0, 0, 0, 0, 0, 0], "overall_rank": [1011629, 481842, 286975, 289189, 777011, 1268749], "win": [0.141, 0.162, 0.196, 0.189, 0.122, 0.08], "win_form": [0.141, 0.171, 0.204, 0.19, 0.087, 0.049], "delta": [0.021, 0.034, 0.0, -0.067, -0.042], "delta_gws": [2, 3, 4, 5, 6], "rank_prob": {"1": 0.077, "2": 0.101, "3": 0.116, "4": 0.121, "5": 0.122, "6": 0.126, "7": 0.123, "8": 0.1, "9": 0.075, "10": 0.038}}, "eddie": {"points": [56, 117, 52, 90, 41, 64], "total": [56, 173, 225, 315, 356, 420], "bench": [11, 20, 11, 22, 14, 18], "behind": [13, 0, 5, 0, 13, 27], "ewma": [56.0, 76.3, 68.2, 75.5, 64.0, 64.0], "mean": [56.0, 86.5, 75.0, 78.8, 71.2, 70.0], "transfers": [0, 0, 1, 2, 0, 0], "hits": [0, 0, 0, 0, 0, 0], "overall_rank": [2677591, 370271, 436870, 267533, 514591, 673986], "win": [0.093, 0.18, 0.172, 0.193, 0.148, 0.128], "win_form": [0.093, 0.16, 0.147, 0.178, 0.107, 0.09], "delta": [0.087, 0.0, 0.021, -0.045, -0.02], "delta_gws": [2, 3, 4, 5, 6], "rank_prob": {"1": 0.119, "2": 0.146, "3": 0.144, "4": 0.128, "5": 0.123, "6": 0.108, "7": 0.091, "8": 0.07, "9": 0.048, "10": 0.023}}, "james": {"points": [55, 111, 55, 77, 40, 69], "total": [55, 166, 221, 298, 338, 407], "bench": [11, 15, 12, 14, 13, 8], "behind": [14, 7, 9, 17, 31, 40], "ewma": [55.0, 73.7, 67.4, 70.6, 60.4, 63.3], "mean": [55.0, 83.0, 73.7, 74.5, 67.6, 67.8], "transfers": [0, 0, 0, 0, 2, 1], "hits": [0, 0, 0, 0, 0, 0], "overall_rank": [2935782, 669925, 590270, 808889, 1335768, 1209547], "win": [0.097, 0.151, 0.147, 0.115, 0.083, 0.081], "win_form": [0.097, 0.138, 0.133, 0.097, 0.061, 0.067], "delta": [0.053, 0.0, -0.032, -0.032, 0.0], "delta_gws": [2, 3, 4, 5, 6], "rank_prob": {"1": 0.079, "2": 0.107, "3": 0.122, "4": 0.127, "5": 0.138, "6": 0.115, "7": 0.112, "8": 0.091, "9": 0.072, "10": 0.037}}, "andrew": {"points": [63, 100, 58, 84, 59, 80], "total": [63, 163, 221, 305, 364, 444], "bench": [12, 6, 9, 2, 4, 3], "behind": [6, 10, 9, 10, 5, 3], "ewma": [63.0, 75.3, 69.6, 74.4, 69.2, 72.8], "mean": [63.0, 81.5, 73.7, 76.2, 72.8, 74.0], "transfers": [0, 0, 2, 1, 0, 2], "hits": [0, 0, 0, 0, 0, 0], "overall_rank": [1282717, 845574, 615163, 549095, 299761, 161939], "win": [0.128, 0.128, 0.147, 0.143, 0.196, 0.261], "win_form": [0.128, 0.138, 0.159, 0.15, 0.217, 0.291], "delta": [0.0, 0.02, 0.0, 0.053, 0.065], "delta_gws": [2, 3, 4, 5, 6], "rank_prob": {"1": 0.27, "2": 0.196, "3": 0.148, "4": 0.127, "5": 0.087, "6": 0.068, "7": 0.047, "8": 0.032, "9": 0.018, "10": 0.006}}, "dom": {"points": [46, 107, 54, 96, 66, 78], "total": [46, 153, 207, 303, 369, 447], "bench": [6, 2, 2, 12, 4, 10], "behind": [23, 20, 23, 12, 0, 0], "ewma": [46.0, 66.3, 62.2, 73.5, 71.0, 73.3], "mean": [46.0, 76.5, 69.0, 75.8, 73.8, 74.5], "transfers": [0, 0, 1, 2, 0, 2], "hits": [0, 0, 0, 0, 0, 0], "overall_rank": [5572584, 1667220, 1589046, 623714, 205698, 129461], "win": [0.065, 0.091, 0.087, 0.137, 0.223, 0.279], "win_form": [0.065, 0.079, 0.073, 0.138, 0.269, 0.307], "delta": [0.026, 0.0, 0.051, 0.086, 0.055], "delta_gws": [2, 3, 4, 5, 6], "rank_prob": {"1": 0.286, "2": 0.204, "3": 0.15, "4": 0.116, "5": 0.084, "6": 0.065, "7": 0.04, "8": 0.031, "9": 0.017, "10": 0.007}}, "hickey": {"points": [69, 68, 66, 65, 58, 59], "total": [69, 137, 203, 264, 322, 377], "bench": [0, 26, 10, 10, 12, 19], "behind": [0, 36, 27, 51, 47, 70], "ewma": [69.0, 68.7, 67.8, 66.9, 63.9, 62.3], "mean": [69.0, 68.5, 67.7, 67.0, 65.2, 64.2], "transfers": [0, 0, 2, 2, 1, 2], "hits": [0, 0, 0, 4, 0, 4], "overall_rank": [607076, 3619481, 2013325, 3389315, 2539535, 3144143], "win": [0.159, 0.048, 0.077, 0.034, 0.053, 0.034], "win_form": [0.159, 0.079, 0.116, 0.044, 0.076, 0.044], "delta": [-0.111, 0.03, -0.044, 0.019, -0.019], "delta_gws": [2, 3, 4, 5, 6], "rank_prob": {"1": 0.034, "2": 0.055, "3": 0.072, "4": 0.089, "5": 0.113, "6": 0.129, "7": 0.136, "8": 0.144, "9": 0.138, "10": 0.091}}, "andy": {"points": [53, 100, 44, 91, 51, 70], "total": [53, 153, 197, 288, 339, 409], "bench": [10, 16, 8, 2, 2, 2], "behind": [16, 20, 33, 27, 30, 38], "ewma": [53.0, 68.7, 60.4, 70.6, 64.1, 66.1], "mean": [53.0, 76.5, 65.7, 72.0, 67.8, 68.2], "transfers": [0, 0, 0, 0, 2, 0], "hits": [0, 0, 0, 0, 0, 0], "overall_rank": [3482299, 1667220, 2642507, 1353549, 1276195, 1109866], "win": [0.089, 0.087, 0.061, 0.079, 0.088, 0.087], "win_form": [0.089, 0.087, 0.059, 0.088, 0.095, 0.1], "delta": [0.0, -0.027, 0.019, 0.008, 0.0], "delta_gws": [2, 3, 4, 5, 6], "rank_prob": {"1": 0.083, "2": 0.105, "3": 0.131, "4": 0.132, "5": 0.127, "6": 0.118, "7": 0.11, "8": 0.094, "9": 0.067, "10": 0.033}}, "saunders": {"points": [52, 91, 52, 85, 49, 55], "total": [52, 143, 195, 280, 329, 384], "bench": [0, 2, 7, 1, 9, 9], "behind": [17, 30, 35, 35, 40, 63], "ewma": [52.0, 65.0, 60.7, 68.8, 62.2, 59.8], "mean": [52.0, 71.5, 65.0, 70.0, 65.8, 64.0], "transfers": [0, 0, 2, 1, 0, 0], "hits": [0, 0, 0, 0, 0, 0], "overall_rank": [3770910, 2815476, 2946006, 1960112, 1949757, 2589132], "win": [0.091, 0.06, 0.054, 0.059, 0.062, 0.035], "win_form": [0.091, 0.063, 0.057, 0.068, 0.067, 0.033], "delta": [-0.031, 0.0, 0.0, 0.0, -0.027], "delta_gws": [2, 3, 4, 5, 6], "rank_prob": {"1": 0.037, "2": 0.059, "3": 0.071, "4": 0.097, "5": 0.11, "6": 0.13, "7": 0.142, "8": 0.143, "9": 0.122, "10": 0.089}}, "derek": {"points": [49, 54, 42, 69, 53, 66], "total": [49, 91, 129, 190, 243, 309], "bench": [5, 15, 12, 8, 27, 14], "behind": [20, 82, 101, 125, 126, 138], "ewma": [49.0, 50.7, 47.8, 54.9, 54.2, 58.2], "mean": [49.0, 51.5, 48.3, 53.5, 53.4, 55.5], "transfers": [0, 4, 2, 3, 0, 0], "hits": [0, 12, 4, 8, 0, 0], "overall_rank": [4673927, 8599790, 8958247, 8856232, 8527231, 7809226], "win": [0.068, 0.007, 0.004, 0.002, 0.003, 0.003], "win_form": [0.068, 0.012, 0.006, 0.003, 0.007, 0.01], "delta": [-0.062, -0.003, -0.002, 0.0, 0.0], "delta_gws": [2, 3, 4, 5, 6], "rank_prob": {"1": 0.003, "2": 0.005, "3": 0.011, "4": 0.018, "5": 0.03, "6": 0.051, "7": 0.075, "8": 0.124, "9": 0.22, "10": 0.462}}}, "gameweeks": {"1": {"george": {"points": 46, "net_points": 46, "star": {"player": "Gu\u00e9hi", "points": 10}, "captain": {"player": "B.Fernandes", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 1, "missed": [], "auto_subs": []}, "michael": {"points": 65, "net_points": 65, "star": {"player": "Jo\u00e3o Pedro", "points": 11}, "captain": {"player": "Haaland", "points": 4, "vice_stood_in": false}, "chip": "Bench boost", "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 0, "missed": [], "auto_subs": []}, "eddie": {"points": 56, "net_points": 56, "star": {"player": "Jo\u00e3o Pedro", "points": 11}, "captain": {"player": "B.Fernandes", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 11, "missed": [{"player": "Rodon", "points": 6}], "auto_subs": []}, "james": {"points": 55, "net_points": 55, "star": {"player": "White", "points": 11}, "captain": {"player": "Haaland", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 11, "missed": [{"player": "Gomez", "points": 6}, {"player": "Thomas", "points": 3}], "auto_subs": []}, "andrew": {"points": 63, "net_points": 63, "star": {"player": "Jo\u00e3o Pedro", "points": 11}, "captain": {"player": "B.Fernandes", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 12, "missed": [{"player": "Xhaka", "points": 9}], "auto_subs": []}, "dom": {"points": 46, "net_points": 46, "star": {"player": "Jo\u00e3o Pedro", "points": 11}, "captain": {"player": "Haaland", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 6, "missed": [{"player": "Robertson", "points": 3}], "auto_subs": []}, "hickey": {"points": 69, "net_points": 69, "star": {"player": "White", "points": 11}, "captain": {"player": "Haaland", "points": 4, "vice_stood_in": false}, "chip": "Bench boost", "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 0, "missed": [], "auto_subs": []}, "andy": {"points": 53, "net_points": 53, "star": {"player": "Jo\u00e3o Pedro", "points": 11}, "captain": {"player": "B.Fernandes", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 10, "missed": [{"player": "Vuskovic", "points": 6}, {"player": "Schade", "points": 3}], "auto_subs": []}, "saunders": {"points": 52, "net_points": 52, "star": {"player": "Jo\u00e3o Pedro", "points": 11}, "captain": {"player": "Haaland", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 0, "missed": [], "auto_subs": []}, "derek": {"points": 49, "net_points": 49, "star": {"player": "Jo\u00e3o Pedro", "points": 22}, "captain": {"player": "Jo\u00e3o Pedro", "points": 22, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 5, "missed": [], "auto_subs": []}}, "2": {"george": {"points": 108, "net_points": 108, "star": {"player": "B.Fernandes", "points": 46}, "captain": {"player": "B.Fernandes", "points": 46, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 0, "missed": [], "auto_subs": []}, "michael": {"points": 105, "net_points": 105, "star": {"player": "B.Fernandes", "points": 46}, "captain": {"player": "B.Fernandes", "points": 46, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 19, "missed": [{"player": "Gro\u00df", "points": 13}, {"player": "Davis", "points": 6}], "auto_subs": []}, "eddie": {"points": 117, "net_points": 117, "star": {"player": "B.Fernandes", "points": 46}, "captain": {"player": "B.Fernandes", "points": 46, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 20, "missed": [{"player": "Gro\u00df", "points": 13}, {"player": "Davis", "points": 6}], "auto_subs": []}, "james": {"points": 111, "net_points": 111, "star": {"player": "B.Fernandes", "points": 46}, "captain": {"player": "B.Fernandes", "points": 46, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 15, "missed": [{"player": "Thomas", "points": 8}, {"player": "Gomez", "points": 5}], "auto_subs": []}, "andrew": {"points": 100, "net_points": 100, "star": {"player": "Haaland", "points": 26}, "captain": {"player": "Haaland", "points": 26, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 6, "missed": [], "auto_subs": [{"in": "Verbruggen", "out": "Dubravka"}]}, "dom": {"points": 107, "net_points": 107, "star": {"player": "Haaland", "points": 26}, "captain": {"player": "Haaland", "points": 26, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 2, "missed": [], "auto_subs": []}, "hickey": {"points": 68, "net_points": 68, "star": {"player": "Isak", "points": 16}, "captain": {"player": "Isak", "points": 16, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 26, "missed": [{"player": "Calafiori", "points": 11}, {"player": "Schade", "points": 10}], "auto_subs": []}, "andy": {"points": 100, "net_points": 100, "star": {"player": "B.Fernandes", "points": 46}, "captain": {"player": "B.Fernandes", "points": 46, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 16, "missed": [{"player": "Schade", "points": 10}, {"player": "N.Williams", "points": 6}], "auto_subs": []}, "saunders": {"points": 91, "net_points": 91, "star": {"player": "B.Fernandes", "points": 23}, "captain": {"player": "Tzolis", "points": 0, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 2, "missed": [{"player": "Cash", "points": 2}], "auto_subs": []}, "derek": {"points": 54, "net_points": 42, "star": {"player": "Palmer", "points": 14}, "captain": {"player": "Palmer", "points": 14, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "De Cuyper", "in_points": 0, "out": "Jacquet", "out_points": 3, "in_id": 115, "out_id": 362}, {"in": "Palmer", "in_points": 7, "out": "B.Fernandes", "out_points": 23, "in_id": 154, "out_id": 426}, {"in": "M.Sangar\u00e9", "in_points": 4, "out": "Mbeumo", "out_points": 11, "in_id": 565, "out_id": 427}, {"in": "Dewsbury-Hall", "in_points": 2, "out": "Semenyo", "out_points": 5, "in_id": 236, "out_id": 397}], "hit": 12, "transfer_net": -41, "bench_points": 15, "missed": [{"player": "Calvert-Lewin", "points": 8}, {"player": "N.Williams", "points": 6}], "auto_subs": []}}, "3": {"george": {"points": 43, "net_points": 43, "star": {"player": "Gu\u00e9hi", "points": 8}, "captain": {"player": "B.Fernandes", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Ajayi", "in_points": 5, "out": "Senesi", "out_points": 0, "in_id": 279, "out_id": 498}, {"in": "Elanga", "in_points": 1, "out": "Dowell", "out_points": 0, "in_id": 454, "out_id": 288}], "hit": 0, "transfer_net": 6, "bench_points": 0, "missed": [], "auto_subs": [{"in": "Virgil", "out": "O'Reilly"}]}, "michael": {"points": 60, "net_points": 60, "star": {"player": "Haaland", "points": 27}, "captain": {"player": "Haaland", "points": 27, "vice_stood_in": false}, "chip": "Triple captain", "transfers": [{"in": "Tzolakis", "in_points": 6, "out": "Kinsky", "out_points": 6, "in_id": 572, "out_id": 496}, {"in": "Elanga", "in_points": 1, "out": "Tzolis", "out_points": 5, "in_id": 454, "out_id": 557}], "hit": 0, "transfer_net": -4, "bench_points": 10, "missed": [{"player": "Shaw", "points": 4}], "auto_subs": []}, "eddie": {"points": 52, "net_points": 52, "star": {"player": "Haaland", "points": 27}, "captain": {"player": "Haaland", "points": 27, "vice_stood_in": false}, "chip": "Triple captain", "transfers": [{"in": "Ajer", "in_points": 2, "out": "Rodon", "out_points": 0, "in_id": 87, "out_id": 329}], "hit": 0, "transfer_net": 2, "bench_points": 11, "missed": [{"player": "Kinsky", "points": 6}, {"player": "Ndiaye", "points": 3}], "auto_subs": []}, "james": {"points": 55, "net_points": 55, "star": {"player": "Haaland", "points": 27}, "captain": {"player": "Haaland", "points": 27, "vice_stood_in": false}, "chip": "Triple captain", "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 12, "missed": [{"player": "Tzolis", "points": 5}, {"player": "Thomas", "points": 4}], "auto_subs": []}, "andrew": {"points": 58, "net_points": 58, "star": {"player": "Haaland", "points": 27}, "captain": {"player": "Haaland", "points": 27, "vice_stood_in": false}, "chip": "Triple captain", "transfers": [{"in": "De Cuyper", "in_points": 4, "out": "Van Hecke", "out_points": 8, "in_id": 115, "out_id": 112}, {"in": "Cherki", "in_points": 3, "out": "Mbeumo", "out_points": 8, "in_id": 399, "out_id": 427}], "hit": 0, "transfer_net": -9, "bench_points": 9, "missed": [{"player": "Ndiaye", "points": 3}, {"player": "van Ewijk", "points": 3}], "auto_subs": []}, "dom": {"points": 54, "net_points": 54, "star": {"player": "Haaland", "points": 27}, "captain": {"player": "Haaland", "points": 27, "vice_stood_in": false}, "chip": "Triple captain", "transfers": [{"in": "De Cuyper", "in_points": 4, "out": "Mosquera", "out_points": 0, "in_id": 115, "out_id": 11}], "hit": 0, "transfer_net": 4, "bench_points": 2, "missed": [], "auto_subs": []}, "hickey": {"points": 66, "net_points": 66, "star": {"player": "Haaland", "points": 18}, "captain": {"player": "Haaland", "points": 18, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "De Cuyper", "in_points": 4, "out": "Rodon", "out_points": 0, "in_id": 115, "out_id": 329}, {"in": "Cherki", "in_points": 3, "out": "Tzolis", "out_points": 5, "in_id": 399, "out_id": 557}], "hit": 0, "transfer_net": 2, "bench_points": 10, "missed": [{"player": "Ballard", "points": 4}], "auto_subs": []}, "andy": {"points": 44, "net_points": 44, "star": {"player": "Haaland", "points": 18}, "captain": {"player": "Haaland", "points": 18, "vice_stood_in": false}, "chip": "Wildcard", "transfers": [{"in": "Ajayi", "in_points": 5, "out": "Vuskovic", "out_points": 12, "in_id": 279, "out_id": 504}, {"in": "De Cuyper", "in_points": 4, "out": "N.Williams", "out_points": 7, "in_id": 115, "out_id": 469}, {"in": "Ajer", "in_points": 2, "out": "van Ewijk", "out_points": 3, "in_id": 87, "out_id": 175}, {"in": "Dedi\u0107", "in_points": 1, "out": "Robertson", "out_points": 1, "in_id": 593, "out_id": 502}, {"in": "Cherki", "in_points": 3, "out": "Tzolis", "out_points": 5, "in_id": 399, "out_id": 557}, {"in": "Yalcouy\u00e9", "in_points": 2, "out": "Cunha", "out_points": 3, "in_id": 605, "out_id": 428}, {"in": "Haaland", "in_points": 9, "out": "Isak", "out_points": 13, "in_id": 411, "out_id": 379}, {"in": "Wissa", "in_points": 1, "out": "Thiago", "out_points": 2, "in_id": 464, "out_id": 106}], "hit": 0, "transfer_net": -19, "bench_points": 8, "missed": [{"player": "Ajayi", "points": 5}], "auto_subs": []}, "saunders": {"points": 52, "net_points": 52, "star": {"player": "Haaland", "points": 18}, "captain": {"player": "Haaland", "points": 18, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Ajayi", "in_points": 5, "out": "Shaw", "out_points": 4, "in_id": 279, "out_id": 423}, {"in": "Elanga", "in_points": 1, "out": "Tzolis", "out_points": 5, "in_id": 454, "out_id": 557}], "hit": 0, "transfer_net": -3, "bench_points": 7, "missed": [{"player": "Cash", "points": 6}], "auto_subs": [{"in": "Mitchell", "out": "O'Reilly"}]}, "derek": {"points": 42, "net_points": 38, "star": {"player": "Haaland", "points": 18}, "captain": {"player": "Haaland", "points": 18, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Cherki", "in_points": 3, "out": "Tzolis", "out_points": 5, "in_id": 399, "out_id": 557}, {"in": "Haaland", "in_points": 9, "out": "Isak", "out_points": 13, "in_id": 411, "out_id": 379}], "hit": 4, "transfer_net": -10, "bench_points": 12, "missed": [{"player": "Kinsky", "points": 6}, {"player": "Konsa", "points": 4}], "auto_subs": [{"in": "Maguire", "out": "O'Reilly"}]}}, "4": {"george": {"points": 81, "net_points": 81, "star": {"player": "Raya", "points": 14}, "captain": {"player": "B.Fernandes", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "De Cuyper", "in_points": 11, "out": "O'Reilly", "out_points": 1, "in_id": 115, "out_id": 387}], "hit": 0, "transfer_net": 10, "bench_points": 0, "missed": [], "auto_subs": [{"in": "Ajayi", "out": "Elanga"}]}, "michael": {"points": 84, "net_points": 84, "star": {"player": "Gro\u00df", "points": 17}, "captain": {"player": "\u00d8degaard", "points": 6, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "\u00d8degaard", "in_points": 3, "out": "Szoboszlai", "out_points": 3, "in_id": 15, "out_id": 368}], "hit": 0, "transfer_net": 0, "bench_points": 4, "missed": [], "auto_subs": [{"in": "Davis", "out": "Elanga"}]}, "eddie": {"points": 90, "net_points": 90, "star": {"player": "Gro\u00df", "points": 17}, "captain": {"player": "Rogers", "points": 16, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Konsa", "in_points": 6, "out": "Maguire", "out_points": 1, "in_id": 31, "out_id": 418}, {"in": "Rogers", "in_points": 8, "out": "Mbeumo", "out_points": 2, "in_id": 40, "out_id": 427}], "hit": 0, "transfer_net": 11, "bench_points": 22, "missed": [{"player": "Davis", "points": 14}], "auto_subs": []}, "james": {"points": 77, "net_points": 77, "star": {"player": "Raya", "points": 14}, "captain": {"player": "Palmer", "points": 10, "vice_stood_in": false}, "chip": "Free hit", "transfers": [{"in": "Raya", "in_points": 14, "out": "Verbruggen", "out_points": 8, "in_id": 1, "out_id": 109}, {"in": "Kinsky", "in_points": 7, "out": "Steele", "out_points": 0, "in_id": 496, "out_id": 111}, {"in": "De Cuyper", "in_points": 11, "out": "Diop", "out_points": 1, "in_id": 115, "out_id": 259}, {"in": "Khalaili", "in_points": 7, "out": "White", "out_points": 1, "in_id": 588, "out_id": 10}, {"in": "Konsa", "in_points": 6, "out": "Shaw", "out_points": 0, "in_id": 31, "out_id": 423}, {"in": "Rogers", "in_points": 8, "out": "Gomez", "out_points": 3, "in_id": 40, "out_id": 127}, {"in": "Palmer", "in_points": 5, "out": "Tzolis", "out_points": 3, "in_id": 154, "out_id": 557}, {"in": "Szoboszlai", "in_points": 3, "out": "Mbeumo", "out_points": 2, "in_id": 368, "out_id": 427}, {"in": "Isak", "in_points": 2, "out": "Calvert-Lewin", "out_points": 10, "in_id": 379, "out_id": 346}, {"in": "Walle Egeli", "in_points": 0, "out": "Haaland", "out_points": 9, "in_id": 321, "out_id": 411}], "hit": 0, "transfer_net": 26, "bench_points": 14, "missed": [{"player": "Khalaili", "points": 7}], "auto_subs": []}, "andrew": {"points": 84, "net_points": 84, "star": {"player": "Jo\u00e3o Pedro", "points": 24}, "captain": {"player": "Jo\u00e3o Pedro", "points": 24, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Rogers", "in_points": 8, "out": "Cherki", "out_points": 1, "in_id": 40, "out_id": 399}], "hit": 0, "transfer_net": 7, "bench_points": 2, "missed": [], "auto_subs": []}, "dom": {"points": 96, "net_points": 96, "star": {"player": "Haaland", "points": 18}, "captain": {"player": "Haaland", "points": 18, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Konsa", "in_points": 6, "out": "Shaw", "out_points": 0, "in_id": 31, "out_id": 423}, {"in": "\u00d8degaard", "in_points": 3, "out": "Wirtz", "out_points": 3, "in_id": 15, "out_id": 366}], "hit": 0, "transfer_net": 6, "bench_points": 12, "missed": [{"player": "Robertson", "points": 7}, {"player": "Yarmoliuk", "points": 4}], "auto_subs": []}, "hickey": {"points": 65, "net_points": 61, "star": {"player": "Schade", "points": 15}, "captain": {"player": "Isak", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Mitchell", "in_points": 1, "out": "Maguire", "out_points": 1, "in_id": 204, "out_id": 418}, {"in": "Wissa", "in_points": 2, "out": "Brobbey", "out_points": 1, "in_id": 464, "out_id": 552}], "hit": 4, "transfer_net": -3, "bench_points": 10, "missed": [], "auto_subs": []}, "andy": {"points": 91, "net_points": 91, "star": {"player": "Gro\u00df", "points": 17}, "captain": {"player": "Palmer", "points": 10, "vice_stood_in": false}, "chip": "Free hit", "transfers": [{"in": "Mitchell", "in_points": 1, "out": "Ajer", "out_points": 1, "in_id": 204, "out_id": 87}, {"in": "Gro\u00df", "in_points": 17, "out": "Schade", "out_points": 15, "in_id": 124, "out_id": 94}, {"in": "Palmer", "in_points": 5, "out": "Yalcouy\u00e9", "out_points": 8, "in_id": 154, "out_id": 605}, {"in": "George Hemmings", "in_points": 1, "out": "B.Fernandes", "out_points": 2, "in_id": 51, "out_id": 426}, {"in": "Gakpo", "in_points": 1, "out": "Cherki", "out_points": 1, "in_id": 367, "out_id": 399}, {"in": "Isak", "in_points": 2, "out": "Wissa", "out_points": 2, "in_id": 379, "out_id": 464}], "hit": 0, "transfer_net": -2, "bench_points": 2, "missed": [], "auto_subs": []}, "saunders": {"points": 85, "net_points": 85, "star": {"player": "Haaland", "points": 18}, "captain": {"player": "Haaland", "points": 18, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "\u00d8degaard", "in_points": 3, "out": "Szoboszlai", "out_points": 3, "in_id": 15, "out_id": 368}], "hit": 0, "transfer_net": 0, "bench_points": 1, "missed": [], "auto_subs": [{"in": "O'Reilly", "out": "Cash"}, {"in": "Hughes", "out": "Elanga"}]}, "derek": {"points": 69, "net_points": 61, "star": {"player": "Haaland", "points": 18}, "captain": {"player": "Haaland", "points": 18, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Ajer", "in_points": 1, "out": "O'Reilly", "out_points": 1, "in_id": 87, "out_id": 387}, {"in": "Enciso", "in_points": 2, "out": "Dewsbury-Hall", "out_points": 2, "in_id": 591, "out_id": 236}, {"in": "Isak", "in_points": 2, "out": "Calvert-Lewin", "out_points": 10, "in_id": 379, "out_id": 346}], "hit": 8, "transfer_net": -16, "bench_points": 8, "missed": [{"player": "M.Sangar\u00e9", "points": 4}], "auto_subs": []}}, "5": {"george": {"points": 27, "net_points": 27, "star": {"player": "De Cuyper", "points": 6}, "captain": {"player": "B.Fernandes", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Emersonn", "in_points": 2, "out": "Furo", "out_points": 0, "in_id": 316, "out_id": 107}], "hit": 0, "transfer_net": 2, "bench_points": 8, "missed": [{"player": "Virgil", "points": 8}], "auto_subs": []}, "michael": {"points": 35, "net_points": 35, "star": {"player": "Haaland", "points": 6}, "captain": {"player": "Gibbs-White", "points": 4, "vice_stood_in": false}, "chip": "Free hit", "transfers": [{"in": "Donnarumma", "in_points": 2, "out": "Verbruggen", "out_points": 6, "in_id": 384, "out_id": 109}, {"in": "Bogle", "in_points": 5, "out": "F.Kad\u0131o\u011flu", "out_points": 5, "in_id": 330, "out_id": 113}, {"in": "Gvardiol", "in_points": 4, "out": "Shaw", "out_points": 2, "in_id": 391, "out_id": 423}, {"in": "Giles", "in_points": 0, "out": "Calafiori", "out_points": 1, "in_id": 282, "out_id": 8}, {"in": "Stach", "in_points": 5, "out": "Gro\u00df", "out_points": 14, "in_id": 335, "out_id": 124}, {"in": "Belloumi", "in_points": 4, "out": "Mbeumo", "out_points": 2, "in_id": 286, "out_id": 427}, {"in": "Gibbs-White", "in_points": 2, "out": "Elanga", "out_points": 0, "in_id": 480, "out_id": 454}, {"in": "Calvert-Lewin", "in_points": 2, "out": "Barry", "out_points": 6, "in_id": 346, "out_id": 249}, {"in": "Delap", "in_points": 1, "out": "Jo\u00e3o Pedro", "out_points": 0, "in_id": 167, "out_id": 165}], "hit": 0, "transfer_net": -11, "bench_points": 12, "missed": [{"player": "Tzolakis", "points": 6}, {"player": "Belloumi", "points": 4}], "auto_subs": []}, "eddie": {"points": 41, "net_points": 41, "star": {"player": "Gro\u00df", "points": 14}, "captain": {"player": "Rogers", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 14, "missed": [{"player": "Ajer", "points": 7}, {"player": "Verbruggen", "points": 6}], "auto_subs": []}, "james": {"points": 40, "net_points": 40, "star": {"player": "Haaland", "points": 12}, "captain": {"player": "Haaland", "points": 12, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Konsa", "in_points": 1, "out": "White", "out_points": 0, "in_id": 31, "out_id": 10}, {"in": "Rogers", "in_points": 2, "out": "Wirtz", "out_points": 6, "in_id": 40, "out_id": 366}], "hit": 0, "transfer_net": -3, "bench_points": 13, "missed": [{"player": "Thomas", "points": 9}, {"player": "Diop", "points": 4}], "auto_subs": [{"in": "Gomez", "out": "Jo\u00e3o Pedro"}]}, "andrew": {"points": 59, "net_points": 59, "star": {"player": "Brobbey", "points": 17}, "captain": {"player": "Haaland", "points": 12, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 4, "missed": [{"player": "Diop", "points": 4}], "auto_subs": [{"in": "Brobbey", "out": "van Ewijk"}]}, "dom": {"points": 66, "net_points": 66, "star": {"player": "Semenyo", "points": 17}, "captain": {"player": "Haaland", "points": 12, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 4, "missed": [{"player": "Robertson", "points": 4}], "auto_subs": [{"in": "Yarmoliuk", "out": "Jo\u00e3o Pedro"}]}, "hickey": {"points": 58, "net_points": 58, "star": {"player": "Haaland", "points": 12}, "captain": {"player": "Haaland", "points": 12, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Konsa", "in_points": 1, "out": "White", "out_points": 0, "in_id": 31, "out_id": 10}], "hit": 0, "transfer_net": 1, "bench_points": 12, "missed": [{"player": "De Cuyper", "points": 6}, {"player": "Slater", "points": 2}], "auto_subs": []}, "andy": {"points": 51, "net_points": 51, "star": {"player": "Haaland", "points": 12}, "captain": {"player": "Haaland", "points": 12, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Mykolenko", "in_points": 5, "out": "Ajer", "out_points": 7, "in_id": 233, "out_id": 87}, {"in": "Bogle", "in_points": 5, "out": "Dedi\u0107", "out_points": 0, "in_id": 330, "out_id": 593}], "hit": 0, "transfer_net": 3, "bench_points": 2, "missed": [], "auto_subs": []}, "saunders": {"points": 49, "net_points": 49, "star": {"player": "Gro\u00df", "points": 14}, "captain": {"player": "Haaland", "points": 12, "vice_stood_in": false}, "chip": "Wildcard", "transfers": [{"in": "Dubravka", "in_points": 0, "out": "Forster", "out_points": 0, "in_id": 497, "out_id": 58}, {"in": "Gvardiol", "in_points": 4, "out": "O'Reilly", "out_points": 1, "in_id": 391, "out_id": 387}, {"in": "Diop", "in_points": 4, "out": "Cash", "out_points": -1, "in_id": 259, "out_id": 32}, {"in": "Belloumi", "in_points": 4, "out": "B.Fernandes", "out_points": 2, "in_id": 286, "out_id": 426}, {"in": "Saka", "in_points": 2, "out": "\u00d8degaard", "out_points": 2, "in_id": 12, "out_id": 15}, {"in": "Gibbs-White", "in_points": 2, "out": "Elanga", "out_points": 0, "in_id": 480, "out_id": 454}, {"in": "Rogers", "in_points": 2, "out": "Hughes", "out_points": 0, "in_id": 40, "out_id": 212}, {"in": "Emersonn", "in_points": 2, "out": "Jo\u00e3o Pedro", "out_points": 0, "in_id": 316, "out_id": 165}], "hit": 0, "transfer_net": 16, "bench_points": 9, "missed": [{"player": "Diop", "points": 4}, {"player": "Belloumi", "points": 4}], "auto_subs": []}, "derek": {"points": 53, "net_points": 53, "star": {"player": "Haaland", "points": 12}, "captain": {"player": "Haaland", "points": 12, "vice_stood_in": false}, "chip": "Wildcard", "transfers": [{"in": "Tzolakis", "in_points": 6, "out": "Kinsky", "out_points": 2, "in_id": 572, "out_id": 496}, {"in": "Verbruggen", "in_points": 6, "out": "Roefs", "out_points": 0, "in_id": 109, "out_id": 529}, {"in": "Bogle", "in_points": 5, "out": "Ajer", "out_points": 7, "in_id": 330, "out_id": 87}, {"in": "Gvardiol", "in_points": 4, "out": "N.Williams", "out_points": 2, "in_id": 391, "out_id": 469}, {"in": "Ajayi", "in_points": 1, "out": "Maguire", "out_points": 2, "in_id": 279, "out_id": 418}, {"in": "Calafiori", "in_points": 1, "out": "Konsa", "out_points": 1, "in_id": 8, "out_id": 31}, {"in": "Gro\u00df", "in_points": 14, "out": "Cherki", "out_points": 8, "in_id": 124, "out_id": 399}, {"in": "Schade", "in_points": 9, "out": "Enciso", "out_points": 2, "in_id": 94, "out_id": 591}, {"in": "Rogers", "in_points": 2, "out": "Szoboszlai", "out_points": 2, "in_id": 40, "out_id": 368}, {"in": "\u00d8degaard", "in_points": 2, "out": "M.Sangar\u00e9", "out_points": 0, "in_id": 15, "out_id": 565}, {"in": "Calvert-Lewin", "in_points": 2, "out": "Jo\u00e3o Pedro", "out_points": 0, "in_id": 346, "out_id": 165}], "hit": 0, "transfer_net": 26, "bench_points": 27, "missed": [{"player": "Gro\u00df", "points": 14}, {"player": "De Cuyper", "points": 6}], "auto_subs": []}}, "6": {"george": {"points": 50, "net_points": 50, "star": {"player": "De Cuyper", "points": 15}, "captain": {"player": "Saka", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Gro\u00df", "in_points": 6, "out": "Elanga", "out_points": 0, "in_id": 124, "out_id": 454}], "hit": 0, "transfer_net": 6, "bench_points": 3, "missed": [], "auto_subs": []}, "michael": {"points": 57, "net_points": 57, "star": {"player": "Jo\u00e3o Pedro", "points": 12}, "captain": {"player": "B.Fernandes", "points": 2, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Barnes", "in_points": 2, "out": "Elanga", "out_points": 0, "in_id": 453, "out_id": 454}], "hit": 0, "transfer_net": 2, "bench_points": 20, "missed": [{"player": "F.Kad\u0131o\u011flu", "points": 9}, {"player": "Mbeumo", "points": 8}], "auto_subs": []}, "eddie": {"points": 64, "net_points": 64, "star": {"player": "Jo\u00e3o Pedro", "points": 12}, "captain": {"player": "Saka", "points": 4, "vice_stood_in": false}, "chip": "Wildcard", "transfers": [{"in": "Raya", "in_points": 3, "out": "Kinsky", "out_points": 3, "in_id": 1, "out_id": 496}, {"in": "Vuskovic", "in_points": 8, "out": "Konsa", "out_points": 4, "in_id": 504, "out_id": 31}, {"in": "Affengruber", "in_points": 3, "out": "Hume", "out_points": 1, "in_id": 650, "out_id": 534}, {"in": "Gibbs-White", "in_points": 2, "out": "B.Fernandes", "out_points": 1, "in_id": 480, "out_id": 426}, {"in": "Saka", "in_points": 2, "out": "Ndiaye", "out_points": 1, "in_id": 12, "out_id": 237}, {"in": "King", "in_points": 2, "out": "Szoboszlai", "out_points": 0, "in_id": 268, "out_id": 368}], "hit": 0, "transfer_net": 10, "bench_points": 18, "missed": [{"player": "Verbruggen", "points": 9}, {"player": "Ajer", "points": 6}], "auto_subs": []}, "james": {"points": 69, "net_points": 69, "star": {"player": "Jo\u00e3o Pedro", "points": 12}, "captain": {"player": "B.Fernandes", "points": 2, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "King", "in_points": 2, "out": "Tzolis", "out_points": 0, "in_id": 268, "out_id": 557}], "hit": 0, "transfer_net": 2, "bench_points": 8, "missed": [{"player": "Thomas", "points": 4}], "auto_subs": []}, "andrew": {"points": 80, "net_points": 80, "star": {"player": "De Cuyper", "points": 15}, "captain": {"player": "Haaland", "points": 12, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Ajer", "in_points": 6, "out": "van Ewijk", "out_points": 6, "in_id": 87, "out_id": 175}, {"in": "Kostoulas", "in_points": 1, "out": "Brobbey", "out_points": 0, "in_id": 138, "out_id": 552}], "hit": 0, "transfer_net": 1, "bench_points": 3, "missed": [], "auto_subs": [{"in": "Xhaka", "out": "Szoboszlai"}]}, "dom": {"points": 78, "net_points": 78, "star": {"player": "De Cuyper", "points": 15}, "captain": {"player": "Haaland", "points": 12, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Hall", "in_points": 0, "out": "Robertson", "out_points": 0, "in_id": 449, "out_id": 502}, {"in": "Rogers", "in_points": 9, "out": "Semenyo", "out_points": 3, "in_id": 40, "out_id": 397}], "hit": 0, "transfer_net": 6, "bench_points": 10, "missed": [{"player": "Yarmoliuk", "points": 8}, {"player": "Calvert-Lewin", "points": 2}], "auto_subs": []}, "hickey": {"points": 59, "net_points": 55, "star": {"player": "De Cuyper", "points": 15}, "captain": {"player": "Wissa", "points": 4, "vice_stood_in": false}, "chip": null, "transfers": [{"in": "Hall", "in_points": 0, "out": "Ballard", "out_points": 0, "in_id": 449, "out_id": 532}, {"in": "Gonzalo", "in_points": 2, "out": "Isak", "out_points": 0, "in_id": 569, "out_id": 379}], "hit": 4, "transfer_net": -2, "bench_points": 19, "missed": [{"player": "Cherki", "points": 10}, {"player": "Konsa", "points": 4}], "auto_subs": []}, "andy": {"points": 70, "net_points": 70, "star": {"player": "De Cuyper", "points": 15}, "captain": {"player": "B.Fernandes", "points": 2, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 2, "missed": [], "auto_subs": [{"in": "Ajayi", "out": "Mykolenko"}]}, "saunders": {"points": 55, "net_points": 55, "star": {"player": "Haaland", "points": 12}, "captain": {"player": "Haaland", "points": 12, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 9, "missed": [{"player": "Belloumi", "points": 6}], "auto_subs": []}, "derek": {"points": 66, "net_points": 66, "star": {"player": "De Cuyper", "points": 15}, "captain": {"player": "Gro\u00df", "points": 12, "vice_stood_in": false}, "chip": null, "transfers": [], "hit": 0, "transfer_net": null, "bench_points": 14, "missed": [{"player": "Verbruggen", "points": 9}, {"player": "Gvardiol", "points": 4}], "auto_subs": []}}}, "season_transfers": {"george": {"transfers": 5, "hits": 0, "chips": [], "gain": 42, "gain_regular": 42, "gain_chips": 0, "best": {"gw": 4, "in": "De Cuyper", "out": "O'Reilly", "weeks": 3, "in_points": 32, "out_points": 7, "gain": 25, "chip": null}, "worst": null, "moves": [{"gw": 3, "in": "Ajayi", "out": "Senesi", "weeks": 4, "in_points": 8, "out_points": 2, "gain": 6, "chip": null}, {"gw": 3, "in": "Elanga", "out": "Dowell", "weeks": 3, "in_points": 1, "out_points": 0, "gain": 1, "chip": null}, {"gw": 4, "in": "De Cuyper", "out": "O'Reilly", "weeks": 3, "in_points": 32, "out_points": 7, "gain": 25, "chip": null}, {"gw": 5, "in": "Emersonn", "out": "Furo", "weeks": 2, "in_points": 4, "out_points": 0, "gain": 4, "chip": null}, {"gw": 6, "in": "Gro\u00df", "out": "Elanga", "weeks": 1, "in_points": 6, "out_points": 0, "gain": 6, "chip": null}]}, "michael": {"transfers": 4, "hits": 0, "chips": [{"gw": 1, "chip": "Bench boost"}, {"gw": 3, "chip": "Triple captain"}, {"gw": 5, "chip": "Free hit"}], "gain": -19, "gain_regular": -8, "gain_chips": -11, "best": {"gw": 6, "in": "Barnes", "out": "Elanga", "weeks": 1, "in_points": 2, "out_points": 0, "gain": 2, "chip": null}, "worst": {"gw": 3, "in": "Elanga", "out": "Tzolis", "weeks": 3, "in_points": 1, "out_points": 10, "gain": -9, "chip": null}, "moves": [{"gw": 3, "in": "Tzolakis", "out": "Kinsky", "weeks": 4, "in_points": 16, "out_points": 18, "gain": -2, "chip": null}, {"gw": 3, "in": "Elanga", "out": "Tzolis", "weeks": 3, "in_points": 1, "out_points": 10, "gain": -9, "chip": null}, {"gw": 4, "in": "\u00d8degaard", "out": "Szoboszlai", "weeks": 3, "in_points": 6, "out_points": 5, "gain": 1, "chip": null}, {"gw": 5, "in": "Donnarumma", "out": "Verbruggen", "weeks": 1, "in_points": 2, "out_points": 6, "gain": -4, "chip": "Free hit"}, {"gw": 5, "in": "Bogle", "out": "F.Kad\u0131o\u011flu", "weeks": 1, "in_points": 5, "out_points": 5, "gain": 0, "chip": "Free hit"}, {"gw": 5, "in": "Gvardiol", "out": "Shaw", "weeks": 1, "in_points": 4, "out_points": 2, "gain": 2, "chip": "Free hit"}, {"gw": 5, "in": "Giles", "out": "Calafiori", "weeks": 1, "in_points": 0, "out_points": 1, "gain": -1, "chip": "Free hit"}, {"gw": 5, "in": "Stach", "out": "Gro\u00df", "weeks": 1, "in_points": 5, "out_points": 14, "gain": -9, "chip": "Free hit"}, {"gw": 5, "in": "Belloumi", "out": "Mbeumo", "weeks": 1, "in_points": 4, "out_points": 2, "gain": 2, "chip": "Free hit"}, {"gw": 5, "in": "Gibbs-White", "out": "Elanga", "weeks": 1, "in_points": 2, "out_points": 0, "gain": 2, "chip": "Free hit"}, {"gw": 5, "in": "Calvert-Lewin", "out": "Barry", "weeks": 1, "in_points": 2, "out_points": 6, "gain": -4, "chip": "Free hit"}, {"gw": 5, "in": "Delap", "out": "Jo\u00e3o Pedro", "weeks": 1, "in_points": 1, "out_points": 0, "gain": 1, "chip": "Free hit"}, {"gw": 6, "in": "Barnes", "out": "Elanga", "weeks": 1, "in_points": 2, "out_points": 0, "gain": 2, "chip": null}]}, "eddie": {"transfers": 3, "hits": 0, "chips": [{"gw": 3, "chip": "Triple captain"}, {"gw": 6, "chip": "Wildcard"}], "gain": 37, "gain_regular": 27, "gain_chips": 10, "best": {"gw": 3, "in": "Ajer", "out": "Rodon", "weeks": 4, "in_points": 16, "out_points": 0, "gain": 16, "chip": null}, "worst": null, "moves": [{"gw": 3, "in": "Ajer", "out": "Rodon", "weeks": 4, "in_points": 16, "out_points": 0, "gain": 16, "chip": null}, {"gw": 4, "in": "Konsa", "out": "Maguire", "weeks": 2, "in_points": 7, "out_points": 3, "gain": 4, "chip": null}, {"gw": 4, "in": "Rogers", "out": "Mbeumo", "weeks": 3, "in_points": 19, "out_points": 12, "gain": 7, "chip": null}, {"gw": 6, "in": "Raya", "out": "Kinsky", "weeks": 1, "in_points": 3, "out_points": 3, "gain": 0, "chip": "Wildcard"}, {"gw": 6, "in": "Vuskovic", "out": "Konsa", "weeks": 1, "in_points": 8, "out_points": 4, "gain": 4, "chip": "Wildcard"}, {"gw": 6, "in": "Affengruber", "out": "Hume", "weeks": 1, "in_points": 3, "out_points": 1, "gain": 2, "chip": "Wildcard"}, {"gw": 6, "in": "Gibbs-White", "out": "B.Fernandes", "weeks": 1, "in_points": 2, "out_points": 1, "gain": 1, "chip": "Wildcard"}, {"gw": 6, "in": "Saka", "out": "Ndiaye", "weeks": 1, "in_points": 2, "out_points": 1, "gain": 1, "chip": "Wildcard"}, {"gw": 6, "in": "King", "out": "Szoboszlai", "weeks": 1, "in_points": 2, "out_points": 0, "gain": 2, "chip": "Wildcard"}]}, "james": {"transfers": 3, "hits": 0, "chips": [{"gw": 3, "chip": "Triple captain"}, {"gw": 4, "chip": "Free hit"}], "gain": 31, "gain_regular": 5, "gain_chips": 26, "best": {"gw": 5, "in": "Rogers", "out": "Wirtz", "weeks": 2, "in_points": 11, "out_points": 8, "gain": 3, "chip": null}, "worst": null, "moves": [{"gw": 4, "in": "Raya", "out": "Verbruggen", "weeks": 1, "in_points": 14, "out_points": 8, "gain": 6, "chip": "Free hit"}, {"gw": 4, "in": "Kinsky", "out": "Steele", "weeks": 1, "in_points": 7, "out_points": 0, "gain": 7, "chip": "Free hit"}, {"gw": 4, "in": "De Cuyper", "out": "Diop", "weeks": 1, "in_points": 11, "out_points": 1, "gain": 10, "chip": "Free hit"}, {"gw": 4, "in": "Khalaili", "out": "White", "weeks": 1, "in_points": 7, "out_points": 1, "gain": 6, "chip": "Free hit"}, {"gw": 4, "in": "Konsa", "out": "Shaw", "weeks": 1, "in_points": 6, "out_points": 0, "gain": 6, "chip": "Free hit"}, {"gw": 4, "in": "Rogers", "out": "Gomez", "weeks": 1, "in_points": 8, "out_points": 3, "gain": 5, "chip": "Free hit"}, {"gw": 4, "in": "Palmer", "out": "Tzolis", "weeks": 1, "in_points": 5, "out_points": 3, "gain": 2, "chip": "Free hit"}, {"gw": 4, "in": "Szoboszlai", "out": "Mbeumo", "weeks": 1, "in_points": 3, "out_points": 2, "gain": 1, "chip": "Free hit"}, {"gw": 4, "in": "Isak", "out": "Calvert-Lewin", "weeks": 1, "in_points": 2, "out_points": 10, "gain": -8, "chip": "Free hit"}, {"gw": 4, "in": "Walle Egeli", "out": "Haaland", "weeks": 1, "in_points": 0, "out_points": 9, "gain": -9, "chip": "Free hit"}, {"gw": 5, "in": "Konsa", "out": "White", "weeks": 2, "in_points": 5, "out_points": 5, "gain": 0, "chip": null}, {"gw": 5, "in": "Rogers", "out": "Wirtz", "weeks": 2, "in_points": 11, "out_points": 8, "gain": 3, "chip": null}, {"gw": 6, "in": "King", "out": "Tzolis", "weeks": 1, "in_points": 2, "out_points": 0, "gain": 2, "chip": null}]}, "andrew": {"transfers": 5, "hits": 0, "chips": [{"gw": 3, "chip": "Triple captain"}], "gain": 7, "gain_regular": 7, "gain_chips": 0, "best": {"gw": 3, "in": "De Cuyper", "out": "Van Hecke", "weeks": 4, "in_points": 36, "out_points": 25, "gain": 11, "chip": null}, "worst": {"gw": 3, "in": "Cherki", "out": "Mbeumo", "weeks": 1, "in_points": 3, "out_points": 8, "gain": -5, "chip": null}, "moves": [{"gw": 3, "in": "De Cuyper", "out": "Van Hecke", "weeks": 4, "in_points": 36, "out_points": 25, "gain": 11, "chip": null}, {"gw": 3, "in": "Cherki", "out": "Mbeumo", "weeks": 1, "in_points": 3, "out_points": 8, "gain": -5, "chip": null}, {"gw": 4, "in": "Rogers", "out": "Cherki", "weeks": 3, "in_points": 19, "out_points": 19, "gain": 0, "chip": null}, {"gw": 6, "in": "Ajer", "out": "van Ewijk", "weeks": 1, "in_points": 6, "out_points": 6, "gain": 0, "chip": null}, {"gw": 6, "in": "Kostoulas", "out": "Brobbey", "weeks": 1, "in_points": 1, "out_points": 0, "gain": 1, "chip": null}]}, "dom": {"transfers": 5, "hits": 0, "chips": [{"gw": 3, "chip": "Triple captain"}], "gain": 43, "gain_regular": 43, "gain_chips": 0, "best": {"gw": 3, "in": "De Cuyper", "out": "Mosquera", "weeks": 4, "in_points": 36, "out_points": 0, "gain": 36, "chip": null}, "worst": {"gw": 4, "in": "\u00d8degaard", "out": "Wirtz", "weeks": 3, "in_points": 6, "out_points": 11, "gain": -5, "chip": null}, "moves": [{"gw": 3, "in": "De Cuyper", "out": "Mosquera", "weeks": 4, "in_points": 36, "out_points": 0, "gain": 36, "chip": null}, {"gw": 4, "in": "Konsa", "out": "Shaw", "weeks": 3, "in_points": 11, "out_points": 5, "gain": 6, "chip": null}, {"gw": 4, "in": "\u00d8degaard", "out": "Wirtz", "weeks": 3, "in_points": 6, "out_points": 11, "gain": -5, "chip": null}, {"gw": 6, "in": "Hall", "out": "Robertson", "weeks": 1, "in_points": 0, "out_points": 0, "gain": 0, "chip": null}, {"gw": 6, "in": "Rogers", "out": "Semenyo", "weeks": 1, "in_points": 9, "out_points": 3, "gain": 6, "chip": null}]}, "hickey": {"transfers": 7, "hits": 8, "chips": [{"gw": 1, "chip": "Bench boost"}], "gain": 35, "gain_regular": 35, "gain_chips": 0, "best": {"gw": 3, "in": "De Cuyper", "out": "Rodon", "weeks": 4, "in_points": 36, "out_points": 0, "gain": 36, "chip": null}, "worst": {"gw": 4, "in": "Wissa", "out": "Brobbey", "weeks": 3, "in_points": 4, "out_points": 18, "gain": -14, "chip": null}, "moves": [{"gw": 3, "in": "De Cuyper", "out": "Rodon", "weeks": 4, "in_points": 36, "out_points": 0, "gain": 36, "chip": null}, {"gw": 3, "in": "Cherki", "out": "Tzolis", "weeks": 4, "in_points": 22, "out_points": 10, "gain": 12, "chip": null}, {"gw": 4, "in": "Mitchell", "out": "Maguire", "weeks": 3, "in_points": 12, "out_points": 5, "gain": 7, "chip": null}, {"gw": 4, "in": "Wissa", "out": "Brobbey", "weeks": 3, "in_points": 4, "out_points": 18, "gain": -14, "chip": null}, {"gw": 5, "in": "Konsa", "out": "White", "weeks": 2, "in_points": 5, "out_points": 5, "gain": 0, "chip": null}, {"gw": 6, "in": "Hall", "out": "Ballard", "weeks": 1, "in_points": 0, "out_points": 0, "gain": 0, "chip": null}, {"gw": 6, "in": "Gonzalo", "out": "Isak", "weeks": 1, "in_points": 2, "out_points": 0, "gain": 2, "chip": null}]}, "andy": {"transfers": 2, "hits": 0, "chips": [{"gw": 3, "chip": "Wildcard"}, {"gw": 4, "chip": "Free hit"}], "gain": -14, "gain_regular": -2, "gain_chips": -12, "best": {"gw": 5, "in": "Bogle", "out": "Dedi\u0107", "weeks": 2, "in_points": 6, "out_points": 0, "gain": 6, "chip": null}, "worst": {"gw": 5, "in": "Mykolenko", "out": "Ajer", "weeks": 2, "in_points": 5, "out_points": 13, "gain": -8, "chip": null}, "moves": [{"gw": 3, "in": "Ajayi", "out": "Vuskovic", "weeks": 4, "in_points": 8, "out_points": 34, "gain": -26, "chip": "Wildcard"}, {"gw": 3, "in": "De Cuyper", "out": "N.Williams", "weeks": 4, "in_points": 36, "out_points": 12, "gain": 24, "chip": "Wildcard"}, {"gw": 3, "in": "Ajer", "out": "van Ewijk", "weeks": 2, "in_points": 3, "out_points": 3, "gain": 0, "chip": "Wildcard"}, {"gw": 3, "in": "Dedi\u0107", "out": "Robertson", "weeks": 2, "in_points": 1, "out_points": 8, "gain": -7, "chip": "Wildcard"}, {"gw": 3, "in": "Cherki", "out": "Tzolis", "weeks": 4, "in_points": 22, "out_points": 10, "gain": 12, "chip": "Wildcard"}, {"gw": 3, "in": "Yalcouy\u00e9", "out": "Cunha", "weeks": 4, "in_points": 12, "out_points": 25, "gain": -13, "chip": "Wildcard"}, {"gw": 3, "in": "Haaland", "out": "Isak", "weeks": 4, "in_points": 30, "out_points": 23, "gain": 7, "chip": "Wildcard"}, {"gw": 3, "in": "Wissa", "out": "Thiago", "weeks": 4, "in_points": 5, "out_points": 12, "gain": -7, "chip": "Wildcard"}, {"gw": 4, "in": "Mitchell", "out": "Ajer", "weeks": 1, "in_points": 1, "out_points": 1, "gain": 0, "chip": "Free hit"}, {"gw": 4, "in": "Gro\u00df", "out": "Schade", "weeks": 1, "in_points": 17, "out_points": 15, "gain": 2, "chip": "Free hit"}, {"gw": 4, "in": "Palmer", "out": "Yalcouy\u00e9", "weeks": 1, "in_points": 5, "out_points": 8, "gain": -3, "chip": "Free hit"}, {"gw": 4, "in": "George Hemmings", "out": "B.Fernandes", "weeks": 1, "in_points": 1, "out_points": 2, "gain": -1, "chip": "Free hit"}, {"gw": 4, "in": "Gakpo", "out": "Cherki", "weeks": 1, "in_points": 1, "out_points": 1, "gain": 0, "chip": "Free hit"}, {"gw": 4, "in": "Isak", "out": "Wissa", "weeks": 1, "in_points": 2, "out_points": 2, "gain": 0, "chip": "Free hit"}, {"gw": 5, "in": "Mykolenko", "out": "Ajer", "weeks": 2, "in_points": 5, "out_points": 13, "gain": -8, "chip": null}, {"gw": 5, "in": "Bogle", "out": "Dedi\u0107", "weeks": 2, "in_points": 6, "out_points": 0, "gain": 6, "chip": null}]}, "saunders": {"transfers": 3, "hits": 0, "chips": [{"gw": 5, "chip": "Wildcard"}], "gain": 16, "gain_regular": -8, "gain_chips": 24, "best": null, "worst": {"gw": 3, "in": "Elanga", "out": "Tzolis", "weeks": 2, "in_points": 1, "out_points": 8, "gain": -7, "chip": null}, "moves": [{"gw": 3, "in": "Ajayi", "out": "Shaw", "weeks": 4, "in_points": 8, "out_points": 9, "gain": -1, "chip": null}, {"gw": 3, "in": "Elanga", "out": "Tzolis", "weeks": 2, "in_points": 1, "out_points": 8, "gain": -7, "chip": null}, {"gw": 4, "in": "\u00d8degaard", "out": "Szoboszlai", "weeks": 1, "in_points": 3, "out_points": 3, "gain": 0, "chip": null}, {"gw": 5, "in": "Dubravka", "out": "Forster", "weeks": 2, "in_points": 0, "out_points": 0, "gain": 0, "chip": "Wildcard"}, {"gw": 5, "in": "Gvardiol", "out": "O'Reilly", "weeks": 2, "in_points": 8, "out_points": 6, "gain": 2, "chip": "Wildcard"}, {"gw": 5, "in": "Diop", "out": "Cash", "weeks": 2, "in_points": 6, "out_points": -1, "gain": 7, "chip": "Wildcard"}, {"gw": 5, "in": "Belloumi", "out": "B.Fernandes", "weeks": 2, "in_points": 10, "out_points": 3, "gain": 7, "chip": "Wildcard"}, {"gw": 5, "in": "Saka", "out": "\u00d8degaard", "weeks": 2, "in_points": 4, "out_points": 3, "gain": 1, "chip": "Wildcard"}, {"gw": 5, "in": "Gibbs-White", "out": "Elanga", "weeks": 2, "in_points": 4, "out_points": 0, "gain": 4, "chip": "Wildcard"}, {"gw": 5, "in": "Rogers", "out": "Hughes", "weeks": 2, "in_points": 11, "out_points": 0, "gain": 11, "chip": "Wildcard"}, {"gw": 5, "in": "Emersonn", "out": "Jo\u00e3o Pedro", "weeks": 2, "in_points": 4, "out_points": 12, "gain": -8, "chip": "Wildcard"}]}, "derek": {"transfers": 9, "hits": 24, "chips": [{"gw": 5, "chip": "Wildcard"}], "gain": -13, "gain_regular": -42, "gain_chips": 29, "best": {"gw": 2, "in": "De Cuyper", "out": "Jacquet", "weeks": 5, "in_points": 36, "out_points": 26, "gain": 10, "chip": null}, "worst": {"gw": 2, "in": "M.Sangar\u00e9", "out": "Mbeumo", "weeks": 3, "in_points": 8, "out_points": 21, "gain": -13, "chip": null}, "moves": [{"gw": 2, "in": "De Cuyper", "out": "Jacquet", "weeks": 5, "in_points": 36, "out_points": 26, "gain": 10, "chip": null}, {"gw": 2, "in": "Palmer", "out": "B.Fernandes", "weeks": 5, "in_points": 23, "out_points": 30, "gain": -7, "chip": null}, {"gw": 2, "in": "M.Sangar\u00e9", "out": "Mbeumo", "weeks": 3, "in_points": 8, "out_points": 21, "gain": -13, "chip": null}, {"gw": 2, "in": "Dewsbury-Hall", "out": "Semenyo", "weeks": 2, "in_points": 4, "out_points": 11, "gain": -7, "chip": null}, {"gw": 3, "in": "Cherki", "out": "Tzolis", "weeks": 2, "in_points": 4, "out_points": 8, "gain": -4, "chip": null}, {"gw": 3, "in": "Haaland", "out": "Isak", "weeks": 4, "in_points": 30, "out_points": 23, "gain": 7, "chip": null}, {"gw": 4, "in": "Ajer", "out": "O'Reilly", "weeks": 1, "in_points": 1, "out_points": 1, "gain": 0, "chip": null}, {"gw": 4, "in": "Enciso", "out": "Dewsbury-Hall", "weeks": 1, "in_points": 2, "out_points": 2, "gain": 0, "chip": null}, {"gw": 4, "in": "Isak", "out": "Calvert-Lewin", "weeks": 3, "in_points": 10, "out_points": 14, "gain": -4, "chip": null}, {"gw": 5, "in": "Tzolakis", "out": "Kinsky", "weeks": 2, "in_points": 8, "out_points": 5, "gain": 3, "chip": "Wildcard"}, {"gw": 5, "in": "Verbruggen", "out": "Roefs", "weeks": 2, "in_points": 15, "out_points": 1, "gain": 14, "chip": "Wildcard"}, {"gw": 5, "in": "Bogle", "out": "Ajer", "weeks": 2, "in_points": 6, "out_points": 13, "gain": -7, "chip": "Wildcard"}, {"gw": 5, "in": "Gvardiol", "out": "N.Williams", "weeks": 2, "in_points": 8, "out_points": 3, "gain": 5, "chip": "Wildcard"}, {"gw": 5, "in": "Ajayi", "out": "Maguire", "weeks": 2, "in_points": 2, "out_points": 4, "gain": -2, "chip": "Wildcard"}, {"gw": 5, "in": "Calafiori", "out": "Konsa", "weeks": 2, "in_points": 10, "out_points": 5, "gain": 5, "chip": "Wildcard"}, {"gw": 5, "in": "Gro\u00df", "out": "Cherki", "weeks": 2, "in_points": 20, "out_points": 18, "gain": 2, "chip": "Wildcard"}, {"gw": 5, "in": "Schade", "out": "Enciso", "weeks": 2, "in_points": 10, "out_points": 4, "gain": 6, "chip": "Wildcard"}, {"gw": 5, "in": "Rogers", "out": "Szoboszlai", "weeks": 2, "in_points": 11, "out_points": 2, "gain": 9, "chip": "Wildcard"}, {"gw": 5, "in": "\u00d8degaard", "out": "M.Sangar\u00e9", "weeks": 2, "in_points": 3, "out_points": 1, "gain": 2, "chip": "Wildcard"}, {"gw": 5, "in": "Calvert-Lewin", "out": "Jo\u00e3o Pedro", "weeks": 2, "in_points": 4, "out_points": 12, "gain": -8, "chip": "Wildcard"}]}}, "insights": {"leader": "dom", "chips": {"dom": [{"chip": "3xc", "start": 1, "stop": 19, "status": "used", "used_gw": 3}, {"chip": "bboost", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "3xc", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 20, "stop": 38, "status": "available", "used_gw": null}], "george": [{"chip": "3xc", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "3xc", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 20, "stop": 38, "status": "available", "used_gw": null}], "saunders": [{"chip": "3xc", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 2, "stop": 19, "status": "used", "used_gw": 5}, {"chip": "3xc", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 20, "stop": 38, "status": "available", "used_gw": null}], "hickey": [{"chip": "3xc", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 1, "stop": 19, "status": "used", "used_gw": 1}, {"chip": "freehit", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "3xc", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 20, "stop": 38, "status": "available", "used_gw": null}], "michael": [{"chip": "3xc", "start": 1, "stop": 19, "status": "used", "used_gw": 3}, {"chip": "bboost", "start": 1, "stop": 19, "status": "used", "used_gw": 1}, {"chip": "freehit", "start": 2, "stop": 19, "status": "used", "used_gw": 5}, {"chip": "wildcard", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "3xc", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 20, "stop": 38, "status": "available", "used_gw": null}], "andy": [{"chip": "3xc", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 2, "stop": 19, "status": "used", "used_gw": 4}, {"chip": "wildcard", "start": 2, "stop": 19, "status": "used", "used_gw": 3}, {"chip": "3xc", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 20, "stop": 38, "status": "available", "used_gw": null}], "derek": [{"chip": "3xc", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 2, "stop": 19, "status": "used", "used_gw": 5}, {"chip": "3xc", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 20, "stop": 38, "status": "available", "used_gw": null}], "james": [{"chip": "3xc", "start": 1, "stop": 19, "status": "used", "used_gw": 3}, {"chip": "bboost", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 2, "stop": 19, "status": "used", "used_gw": 4}, {"chip": "wildcard", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "3xc", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 20, "stop": 38, "status": "available", "used_gw": null}], "eddie": [{"chip": "3xc", "start": 1, "stop": 19, "status": "used", "used_gw": 3}, {"chip": "bboost", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 2, "stop": 19, "status": "used", "used_gw": 6}, {"chip": "3xc", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 20, "stop": 38, "status": "available", "used_gw": null}], "andrew": [{"chip": "3xc", "start": 1, "stop": 19, "status": "used", "used_gw": 3}, {"chip": "bboost", "start": 1, "stop": 19, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 2, "stop": 19, "status": "available", "used_gw": null}, {"chip": "3xc", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "bboost", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "freehit", "start": 20, "stop": 38, "status": "available", "used_gw": null}, {"chip": "wildcard", "start": 20, "stop": 38, "status": "available", "used_gw": null}]}, "captaincy": {"george": {"points": 66, "best": 152, "lost": 86, "weeks": [{"gw": 1, "captain": "B.Fernandes", "points": 4, "best": "Gu\u00e9hi", "best_points": 20}, {"gw": 2, "captain": "B.Fernandes", "points": 46, "best": "B.Fernandes", "best_points": 46}, {"gw": 3, "captain": "B.Fernandes", "points": 4, "best": "Gu\u00e9hi", "best_points": 16}, {"gw": 4, "captain": "B.Fernandes", "points": 4, "best": "Raya", "best_points": 28}, {"gw": 5, "captain": "B.Fernandes", "points": 4, "best": "De Cuyper", "best_points": 12}, {"gw": 6, "captain": "Saka", "points": 4, "best": "De Cuyper", "best_points": 30}]}, "michael": {"points": 89, "best": 165, "lost": 76, "weeks": [{"gw": 1, "captain": "Haaland", "points": 4, "best": "Jo\u00e3o Pedro", "best_points": 22}, {"gw": 2, "captain": "B.Fernandes", "points": 46, "best": "B.Fernandes", "best_points": 46}, {"gw": 3, "captain": "Haaland", "points": 27, "best": "Haaland", "best_points": 27}, {"gw": 4, "captain": "\u00d8degaard", "points": 6, "best": "Gro\u00df", "best_points": 34}, {"gw": 5, "captain": "Gibbs-White", "points": 4, "best": "Haaland", "best_points": 12}, {"gw": 6, "captain": "B.Fernandes", "points": 2, "best": "Jo\u00e3o Pedro", "best_points": 24}]}, "eddie": {"points": 101, "best": 181, "lost": 80, "weeks": [{"gw": 1, "captain": "B.Fernandes", "points": 4, "best": "Jo\u00e3o Pedro", "best_points": 22}, {"gw": 2, "captain": "B.Fernandes", "points": 46, "best": "B.Fernandes", "best_points": 46}, {"gw": 3, "captain": "Haaland", "points": 27, "best": "Haaland", "best_points": 27}, {"gw": 4, "captain": "Rogers", "points": 16, "best": "Gro\u00df", "best_points": 34}, {"gw": 5, "captain": "Rogers", "points": 4, "best": "Gro\u00df", "best_points": 28}, {"gw": 6, "captain": "Saka", "points": 4, "best": "Jo\u00e3o Pedro", "best_points": 24}]}, "james": {"points": 101, "best": 163, "lost": 62, "weeks": [{"gw": 1, "captain": "Haaland", "points": 4, "best": "White", "best_points": 22}, {"gw": 2, "captain": "B.Fernandes", "points": 46, "best": "B.Fernandes", "best_points": 46}, {"gw": 3, "captain": "Haaland", "points": 27, "best": "Haaland", "best_points": 27}, {"gw": 4, "captain": "Palmer", "points": 10, "best": "Raya", "best_points": 28}, {"gw": 5, "captain": "Haaland", "points": 12, "best": "Gomez", "best_points": 16}, {"gw": 6, "captain": "B.Fernandes", "points": 2, "best": "Jo\u00e3o Pedro", "best_points": 24}]}, "andrew": {"points": 105, "best": 183, "lost": 78, "weeks": [{"gw": 1, "captain": "B.Fernandes", "points": 4, "best": "Jo\u00e3o Pedro", "best_points": 22}, {"gw": 2, "captain": "Haaland", "points": 26, "best": "B.Fernandes", "best_points": 46}, {"gw": 3, "captain": "Haaland", "points": 27, "best": "Haaland", "best_points": 27}, {"gw": 4, "captain": "Jo\u00e3o Pedro", "points": 24, "best": "Jo\u00e3o Pedro", "best_points": 24}, {"gw": 5, "captain": "Haaland", "points": 12, "best": "Brobbey", "best_points": 34}, {"gw": 6, "captain": "Haaland", "points": 12, "best": "De Cuyper", "best_points": 30}]}, "dom": {"points": 99, "best": 193, "lost": 94, "weeks": [{"gw": 1, "captain": "Haaland", "points": 4, "best": "Jo\u00e3o Pedro", "best_points": 22}, {"gw": 2, "captain": "Haaland", "points": 26, "best": "B.Fernandes", "best_points": 46}, {"gw": 3, "captain": "Haaland", "points": 27, "best": "Haaland", "best_points": 27}, {"gw": 4, "captain": "Haaland", "points": 18, "best": "Gro\u00df", "best_points": 34}, {"gw": 5, "captain": "Haaland", "points": 12, "best": "Semenyo", "best_points": 34}, {"gw": 6, "captain": "Haaland", "points": 12, "best": "De Cuyper", "best_points": 30}]}, "hickey": {"points": 58, "best": 152, "lost": 94, "weeks": [{"gw": 1, "captain": "Haaland", "points": 4, "best": "White", "best_points": 22}, {"gw": 2, "captain": "Isak", "points": 16, "best": "Haaland", "best_points": 26}, {"gw": 3, "captain": "Haaland", "points": 18, "best": "Isak", "best_points": 26}, {"gw": 4, "captain": "Isak", "points": 4, "best": "Schade", "best_points": 30}, {"gw": 5, "captain": "Haaland", "points": 12, "best": "Schade", "best_points": 18}, {"gw": 6, "captain": "Wissa", "points": 4, "best": "De Cuyper", "best_points": 30}]}, "andy": {"points": 92, "best": 168, "lost": 76, "weeks": [{"gw": 1, "captain": "B.Fernandes", "points": 4, "best": "Jo\u00e3o Pedro", "best_points": 22}, {"gw": 2, "captain": "B.Fernandes", "points": 46, "best": "B.Fernandes", "best_points": 46}, {"gw": 3, "captain": "Haaland", "points": 18, "best": "Haaland", "best_points": 18}, {"gw": 4, "captain": "Palmer", "points": 10, "best": "Gro\u00df", "best_points": 34}, {"gw": 5, "captain": "Haaland", "points": 12, "best": "Schade", "best_points": 18}, {"gw": 6, "captain": "B.Fernandes", "points": 2, "best": "De Cuyper", "best_points": 30}]}, "saunders": {"points": 64, "best": 178, "lost": 114, "weeks": [{"gw": 1, "captain": "Haaland", "points": 4, "best": "Jo\u00e3o Pedro", "best_points": 22}, {"gw": 2, "captain": "Tzolis", "points": 0, "best": "B.Fernandes", "best_points": 46}, {"gw": 3, "captain": "Haaland", "points": 18, "best": "Mitchell", "best_points": 30}, {"gw": 4, "captain": "Haaland", "points": 18, "best": "Gro\u00df", "best_points": 34}, {"gw": 5, "captain": "Haaland", "points": 12, "best": "Gro\u00df", "best_points": 28}, {"gw": 6, "captain": "Haaland", "points": 12, "best": "Calafiori", "best_points": 18}]}, "derek": {"points": 96, "best": 130, "lost": 34, "weeks": [{"gw": 1, "captain": "Jo\u00e3o Pedro", "points": 22, "best": "Jo\u00e3o Pedro", "best_points": 22}, {"gw": 2, "captain": "Palmer", "points": 14, "best": "Jo\u00e3o Pedro", "best_points": 18}, {"gw": 3, "captain": "Haaland", "points": 18, "best": "Haaland", "best_points": 18}, {"gw": 4, "captain": "Haaland", "points": 18, "best": "Jo\u00e3o Pedro", "best_points": 24}, {"gw": 5, "captain": "Haaland", "points": 12, "best": "Schade", "best_points": 18}, {"gw": 6, "captain": "Gro\u00df", "points": 12, "best": "De Cuyper", "best_points": 30}]}}, "most_captained": {"1": {"player": "Haaland", "managers": 5}, "2": {"player": "B.Fernandes", "managers": 5}, "3": {"player": "Haaland", "managers": 9}, "4": {"player": "Haaland", "managers": 3}, "5": {"player": "Haaland", "managers": 7}, "6": {"player": "B.Fernandes", "managers": 3}}, "gap": {"george": {"season": {"unique": -71, "captaincy": -21, "hits": 0, "gap": -92}, "recent": {"unique": -71, "captaincy": -21, "hits": 0, "gap": -92}, "recent_gws": 5, "only_mine": ["Raya", "Gabriel", "Saka", "Ajayi", "Emersonn", "Walle Egeli", "Virgil", "Gu\u00e9hi", "Mbeumo", "Gibbs-White"], "only_theirs": ["Calafiori", "\u00d8degaard", "Konsa", "Rogers", "Yarmoliuk", "Verbruggen", "Jo\u00e3o Pedro", "Greaves", "Haaland", "Hall"]}, "michael": {"season": {"unique": -36, "captaincy": -5, "hits": 0, "gap": -41}, "recent": {"unique": -55, "captaincy": -5, "hits": 0, "gap": -60}, "recent_gws": 5, "only_mine": ["F.Kad\u0131o\u011flu", "Barry", "Davis", "Shaw", "Mbeumo", "Barnes", "N.Williams", "Tzolakis"], "only_theirs": ["Konsa", "Rogers", "Yarmoliuk", "De Cuyper", "Greaves", "Calvert-Lewin", "Hall", "Dubravka"]}, "eddie": {"season": {"unique": -28, "captaincy": 1, "hits": 0, "gap": -27}, "recent": {"unique": -38, "captaincy": 1, "hits": 0, "gap": -37}, "recent_gws": 5, "only_mine": ["Raya", "Saka", "Ajer", "King", "Davis", "Gibbs-White", "Vuskovic", "Affengruber"], "only_theirs": ["\u00d8degaard", "Konsa", "Yarmoliuk", "De Cuyper", "Greaves", "B.Fernandes", "Hall", "Dubravka"]}, "james": {"season": {"unique": -41, "captaincy": 1, "hits": 0, "gap": -40}, "recent": {"unique": -50, "captaincy": 1, "hits": 0, "gap": -49}, "recent_gws": 5, "only_mine": ["Steele", "Gomez", "Thomas", "Diop", "King", "Shaw", "Mbeumo"], "only_theirs": ["\u00d8degaard", "Yarmoliuk", "De Cuyper", "Gro\u00df", "Greaves", "Hall", "Dubravka"]}, "andrew": {"season": {"unique": -6, "captaincy": 3, "hits": 0, "gap": -3}, "recent": {"unique": -23, "captaincy": 3, "hits": 0, "gap": -20}, "recent_gws": 5, "only_mine": ["Ajer", "Kostoulas", "Ndiaye", "Diop", "Szoboszlai", "Gvardiol", "Xhaka"], "only_theirs": ["\u00d8degaard", "Konsa", "Yarmoliuk", "Gro\u00df", "Greaves", "Calvert-Lewin", "Hall"]}, "dom": null, "hickey": {"season": {"unique": -37, "captaincy": -25, "hits": -8, "gap": -70}, "recent": {"unique": -60, "captaincy": -25, "hits": -8, "gap": -93}, "recent_gws": 5, "only_mine": ["Schade", "Mitchell", "Pickford", "Slater", "Cherki", "Mbeumo", "Wissa", "Kinsky", "Gonzalo"], "only_theirs": ["\u00d8degaard", "Yarmoliuk", "Verbruggen", "Gro\u00df", "Jo\u00e3o Pedro", "Greaves", "Calvert-Lewin", "B.Fernandes", "Dubravka"]}, "andy": {"season": {"unique": -30, "captaincy": -8, "hits": 0, "gap": -38}, "recent": {"unique": -37, "captaincy": -8, "hits": 0, "gap": -45}, "recent_gws": 5, "only_mine": ["Raya", "Schade", "Mykolenko", "Lecomte", "Ajayi", "Bogle", "Cherki", "Wissa", "Yalcouy\u00e9"], "only_theirs": ["\u00d8degaard", "Konsa", "Yarmoliuk", "Verbruggen", "Gro\u00df", "Greaves", "Calvert-Lewin", "Hall", "Dubravka"]}, "saunders": {"season": {"unique": -41, "captaincy": -22, "hits": 0, "gap": -63}, "recent": {"unique": -47, "captaincy": -22, "hits": 0, "gap": -69}, "recent_gws": 5, "only_mine": ["Raya", "Saka", "Mitchell", "Diop", "Ajayi", "Belloumi", "Emersonn", "Gvardiol", "Gibbs-White"], "only_theirs": ["\u00d8degaard", "Konsa", "Yarmoliuk", "Verbruggen", "De Cuyper", "Jo\u00e3o Pedro", "Greaves", "B.Fernandes", "Hall"]}, "derek": {"season": {"unique": -108, "captaincy": -6, "hits": -24, "gap": -138}, "recent": {"unique": -102, "captaincy": -15, "hits": -24, "gap": -141}, "recent_gws": 5, "only_mine": ["Schade", "Palmer", "Ajayi", "Bogle", "Isak", "Gvardiol", "Tzolakis"], "only_theirs": ["Konsa", "Yarmoliuk", "Jo\u00e3o Pedro", "Greaves", "B.Fernandes", "Hall", "Dubravka"]}}, "outlook": {"george": [{"gw": 7, "difficulty": 3.13, "blanks": 0, "doubles": 0}, {"gw": 8, "difficulty": 3.13, "blanks": 0, "doubles": 0}, {"gw": 9, "difficulty": 3.4, "blanks": 0, "doubles": 0}, {"gw": 10, "difficulty": 2.93, "blanks": 0, "doubles": 0}, {"gw": 11, "difficulty": 3.0, "blanks": 0, "doubles": 0}], "michael": [{"gw": 7, "difficulty": 3.0, "blanks": 0, "doubles": 0}, {"gw": 8, "difficulty": 3.2, "blanks": 0, "doubles": 0}, {"gw": 9, "difficulty": 3.67, "blanks": 0, "doubles": 0}, {"gw": 10, "difficulty": 3.0, "blanks": 0, "doubles": 0}, {"gw": 11, "difficulty": 3.0, "blanks": 0, "doubles": 0}], "eddie": [{"gw": 7, "difficulty": 2.93, "blanks": 0, "doubles": 0}, {"gw": 8, "difficulty": 2.8, "blanks": 0, "doubles": 0}, {"gw": 9, "difficulty": 3.67, "blanks": 0, "doubles": 0}, {"gw": 10, "difficulty": 2.87, "blanks": 0, "doubles": 0}, {"gw": 11, "difficulty": 3.07, "blanks": 0, "doubles": 0}], "james": [{"gw": 7, "difficulty": 2.87, "blanks": 0, "doubles": 0}, {"gw": 8, "difficulty": 2.93, "blanks": 0, "doubles": 0}, {"gw": 9, "difficulty": 3.8, "blanks": 0, "doubles": 0}, {"gw": 10, "difficulty": 2.8, "blanks": 0, "doubles": 0}, {"gw": 11, "difficulty": 3.07, "blanks": 0, "doubles": 0}], "andrew": [{"gw": 7, "difficulty": 2.73, "blanks": 0, "doubles": 0}, {"gw": 8, "difficulty": 3.07, "blanks": 0, "doubles": 0}, {"gw": 9, "difficulty": 3.53, "blanks": 0, "doubles": 0}, {"gw": 10, "difficulty": 3.07, "blanks": 0, "doubles": 0}, {"gw": 11, "difficulty": 2.67, "blanks": 0, "doubles": 0}], "dom": [{"gw": 7, "difficulty": 2.93, "blanks": 0, "doubles": 0}, {"gw": 8, "difficulty": 3.07, "blanks": 0, "doubles": 0}, {"gw": 9, "difficulty": 3.67, "blanks": 0, "doubles": 0}, {"gw": 10, "difficulty": 2.8, "blanks": 0, "doubles": 0}, {"gw": 11, "difficulty": 2.87, "blanks": 0, "doubles": 0}], "hickey": [{"gw": 7, "difficulty": 2.87, "blanks": 0, "doubles": 0}, {"gw": 8, "difficulty": 3.07, "blanks": 0, "doubles": 0}, {"gw": 9, "difficulty": 3.27, "blanks": 0, "doubles": 0}, {"gw": 10, "difficulty": 3.07, "blanks": 0, "doubles": 0}, {"gw": 11, "difficulty": 3.0, "blanks": 0, "doubles": 0}], "andy": [{"gw": 7, "difficulty": 2.87, "blanks": 0, "doubles": 0}, {"gw": 8, "difficulty": 3.0, "blanks": 0, "doubles": 0}, {"gw": 9, "difficulty": 3.53, "blanks": 0, "doubles": 0}, {"gw": 10, "difficulty": 2.93, "blanks": 0, "doubles": 0}, {"gw": 11, "difficulty": 3.07, "blanks": 0, "doubles": 0}], "saunders": [{"gw": 7, "difficulty": 3.2, "blanks": 0, "doubles": 0}, {"gw": 8, "difficulty": 3.0, "blanks": 0, "doubles": 0}, {"gw": 9, "difficulty": 3.07, "blanks": 0, "doubles": 0}, {"gw": 10, "difficulty": 3.13, "blanks": 0, "doubles": 0}, {"gw": 11, "difficulty": 2.73, "blanks": 0, "doubles": 0}], "derek": [{"gw": 7, "difficulty": 2.87, "blanks": 0, "doubles": 0}, {"gw": 8, "difficulty": 3.0, "blanks": 0, "doubles": 0}, {"gw": 9, "difficulty": 3.6, "blanks": 0, "doubles": 0}, {"gw": 10, "difficulty": 3.07, "blanks": 0, "doubles": 0}, {"gw": 11, "difficulty": 2.87, "blanks": 0, "doubles": 0}]}, "bench": {"george": {"bench_unused": 12, "autosub_points": 7, "autosubs": 2}, "michael": {"bench_unused": 65, "autosub_points": 14, "autosubs": 1}, "eddie": {"bench_unused": 96, "autosub_points": 0, "autosubs": 0}, "james": {"bench_unused": 73, "autosub_points": 8, "autosubs": 1}, "andrew": {"bench_unused": 36, "autosub_points": 19, "autosubs": 3}, "dom": {"bench_unused": 36, "autosub_points": 3, "autosubs": 1}, "hickey": {"bench_unused": 77, "autosub_points": 0, "autosubs": 0}, "andy": {"bench_unused": 40, "autosub_points": 1, "autosubs": 1}, "saunders": {"bench_unused": 28, "autosub_points": 17, "autosubs": 3}, "derek": {"bench_unused": 81, "autosub_points": 2, "autosubs": 1}}, "h2h": {"andrew": {"andy": [4, 1, 1], "derek": [6, 0, 0], "dom": [3, 0, 3], "eddie": [4, 0, 2], "george": [5, 0, 1], "hickey": [4, 0, 2], "james": [5, 0, 1], "michael": [2, 1, 3], "saunders": [5, 0, 1]}, "andy": {"andrew": [1, 1, 4], "derek": [5, 0, 1], "dom": [1, 0, 5], "eddie": [3, 0, 3], "george": [5, 0, 1], "hickey": [3, 0, 3], "james": [3, 0, 3], "michael": [3, 0, 3], "saunders": [5, 0, 1]}, "derek": {"andrew": [0, 0, 6], "andy": [1, 0, 5], "dom": [1, 0, 5], "eddie": [2, 0, 4], "george": [3, 0, 3], "hickey": [1, 1, 4], "james": [1, 0, 5], "michael": [2, 0, 4], "saunders": [2, 0, 4]}, "dom": {"andrew": [3, 0, 3], "andy": [5, 0, 1], "derek": [5, 0, 1], "eddie": [4, 0, 2], "george": [4, 1, 1], "hickey": [4, 0, 2], "james": [3, 0, 3], "michael": [4, 0, 2], "saunders": [5, 0, 1]}, "eddie": {"andrew": [2, 0, 4], "andy": [3, 0, 3], "derek": [4, 0, 2], "dom": [2, 0, 4], "george": [6, 0, 0], "hickey": [3, 0, 3], "james": [4, 0, 2], "michael": [4, 0, 2], "saunders": [4, 1, 1]}, "george": {"andrew": [1, 0, 5], "andy": [1, 0, 5], "derek": [3, 0, 3], "dom": [1, 1, 4], "eddie": [0, 0, 6], "hickey": [2, 0, 4], "james": [1, 0, 5], "michael": [1, 0, 5], "saunders": [1, 0, 5]}, "hickey": {"andrew": [2, 0, 4], "andy": [3, 0, 3], "derek": [4, 1, 1], "dom": [2, 0, 4], "eddie": [3, 0, 3], "george": [4, 0, 2], "james": [3, 0, 3], "michael": [3, 0, 3], "saunders": [3, 1, 2]}, "james": {"andrew": [1, 0, 5], "andy": [3, 0, 3], "derek": [5, 0, 1], "dom": [3, 0, 3], "eddie": [2, 0, 4], "george": [5, 0, 1], "hickey": [3, 0, 3], "michael": [3, 0, 3], "saunders": [4, 0, 2]}, "michael": {"andrew": [3, 1, 2], "andy": [3, 0, 3], "derek": [4, 0, 2], "dom": [2, 0, 4], "eddie": [2, 0, 4], "george": [5, 0, 1], "hickey": [3, 0, 3], "james": [3, 0, 3], "saunders": [4, 0, 2]}, "saunders": {"andrew": [1, 0, 5], "andy": [1, 0, 5], "derek": [4, 0, 2], "dom": [1, 0, 5], "eddie": [1, 1, 4], "george": [5, 0, 1], "hickey": [2, 1, 3], "james": [2, 0, 4], "michael": [2, 0, 4]}}}};
+const META = {"season": "2026-27", "provisional": "", "pulled": "13 Oct 2026", "leagueName": "THG Ing League", "teams": {"george": "xP Marks the Spot", "michael": "Shawberto Carlos", "eddie": "Struijk my Johnson", "james": "Ctrl Alt de Ligt", "andrew": "Carrick to basics", "dom": "Andoni?IhardlyIraola", "hickey": "Jacquet Potato", "andy": "Rash & the furious", "saunders": "Jack Stringer \u2b07", "derek": "Isakly my point"}, "labels": {"hickey": "Sam H", "saunders": "Sam S"}, "commentary": {"1": "<p><b>Sam H</b> and <b>Michael</b> both played the bench boost in week one and finished first and second on 69 and 65. <b>Derek</b> had the best captaincy, Jo\u00e3o Pedro for 22. George and Dom start at the bottom on 46.</p>", "2": "<p>Bruno Fernandes scored 23, and five managers had him as captain for 46: <b>Eddie</b> (117), James (111), George (108), Michael (105) and Andy (100). Eddie goes top.</p><p><b>Derek</b> made four transfers for a 12-point hit, selling Bruno and Mbeumo (11) in the same week. The incoming players scored 41 fewer than the outgoing ones once the hit is counted.</p>", "3": "<p>Five managers triple-captained Haaland for 27: Michael, Andrew, James, Dom and Eddie. The top score went to <b>Sam H</b> on 66 without a chip.</p><p><b>Andy</b>'s wildcard started badly, with the eight new players scoring 19 fewer than the ones they replaced, Isak (13) and Vuskovic (12) among them. <b>Michael</b> leads on 230.</p>", "4": "<p><b>Dom</b> scored 96, the week's best. Two free hits followed: Andy's (91, Gro\u00df 17) and James's (77), where the incoming players outscored the ones they replaced by 26.</p><p><b>Eddie</b>'s Rogers captaincy returned 16 and his 90 put him back on top, one point ahead of Michael. <b>Derek</b> took another hit, this time 8 points, and the transfers finished 16 down.</p>", "5": "<p><b>Dom</b> goes top for the first time, with 66 led by Semenyo's 17. <b>Andrew</b> is five behind after Brobbey scored 17.</p><p>Derek and Sam S both wildcarded, and both squads improved: Derek's new players outscored the old by 26 and Sam S's by 16, although Derek benched Gro\u00df's 14. <b>Michael</b>'s free hit scored 35, and the incoming players scored 11 fewer than the ones they replaced.</p>", "6": "<p><b>Andrew</b> and <b>Dom</b> both scored 78, with De Cuyper on 15 for each, and it's now a two-horse race. Dom leads Andrew by 5, and their win chances are 28% and 25%. Nobody else is above 13%.</p><p><b>Eddie</b> wildcarded for 64. <b>Michael</b> left 20 on the bench, including Kad\u0131o\u011flu (9) and Mbeumo (8). <b>Derek</b>'s Gro\u00df captaincy was worth 12.</p>"}};
+
+const NAMES = DATA.names;
+const M = DATA.managers;
+const GWS = DATA.gws;
+const LAST = GWS.length - 1;
+const COLOUR = Object.fromEntries(NAMES.map((n, i) => [n, `var(--c${i})`]));
+const label = n => META.labels[n] || (n[0].toUpperCase() + n.slice(1));
+const pct = (x, d = 0) => x == null ? '–' : (x * 100).toFixed(d) + '%';
+const fmt = (x, d = 0) => x == null ? '–' : Number(x).toFixed(d);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+let focus = null;
+try { const saved = localStorage.getItem('fpl-focus-' + DATA.league); if (saved && NAMES.includes(saved)) focus = saved; } catch (e) { /* storage unavailable */ }
+
+// ---------- header ----------
+const order = [...NAMES].sort((a, b) => M[b].total[LAST] - M[a].total[LAST]);
+const leader = order[0], second = order[1];
+const byWin = [...NAMES].sort((a, b) => M[b].win[LAST] - M[a].win[LAST]);
+const lastDelta = NAMES.map(n => [n, M[n].delta[M[n].delta.length - 1] || 0]);
+const bestMover = lastDelta.reduce((a, b) => (b[1] > a[1] ? b : a));
+const worstMover = lastDelta.reduce((a, b) => (b[1] < a[1] ? b : a));
+const gwScores = NAMES.map(n => [n, M[n].points[LAST]]).sort((a, b) => b[1] - a[1]);
+
+document.getElementById('eyebrow').textContent = `${META.season} · after gameweek ${GWS[LAST]} of 38 · ${NAMES.length} managers`;
+document.getElementById('h1').textContent = META.leagueName;
+const gap = M[leader].total[LAST] - M[second].total[LAST];
+let lede = `<b>${esc(label(leader))}</b> leads by <b>${gap}</b> point${gap === 1 ? '' : 's'} from ${esc(label(second))}. `;
+lede += byWin[0] === leader
+  ? `The simulation agrees, giving ${esc(label(leader))} a <b>${pct(M[leader].win[LAST])}</b> chance of finishing top, with ${GWS.length > 0 ? 38 - GWS[LAST] : 38} gameweeks to play.`
+  : `The simulation still has <b>${esc(label(byWin[0]))}</b> as favourite at ${pct(M[byWin[0]].win[LAST])}, with ${38 - GWS[LAST]} gameweeks to play.`;
+document.getElementById('lede').innerHTML = lede;
+
+const tiles = [
+  ['Leader', label(leader), `${M[leader].total[LAST]} pts`],
+  ['Favourite', label(byWin[0]), `${pct(M[byWin[0]].win[LAST])} to win`],
+  [`Top GW${GWS[LAST]} score`, String(gwScores[0][1]), label(gwScores[0][0])],
+  [`Biggest GW${GWS[LAST]} mover`, bestMover[1] > 0 ? label(bestMover[0]) : '—', bestMover[1] > 0 ? `+${(bestMover[1] * 100).toFixed(1)} pts of win chance` : 'No shift beat the noise'],
+];
+document.getElementById('tiles').innerHTML = tiles.map(([k, v, s]) =>
+  `<div class="tile"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="s">${esc(s)}</div></div>`).join('');
+
+// ---------- focus chips ----------
+const bar = document.getElementById('focusbar');
+for (const n of NAMES) {
+  const b = document.createElement('button');
+  b.className = 'chip'; b.type = 'button'; b.dataset.name = n;
+  b.innerHTML = `<i style="background:${COLOUR[n]}"></i>${esc(label(n))}`;
+  b.addEventListener('click', () => setFocus(focus === n ? null : n));
+  bar.appendChild(b);
+}
+const clear = document.createElement('button');
+clear.className = 'chip clear'; clear.type = 'button'; clear.textContent = 'Show all';
+clear.addEventListener('click', () => setFocus(null));
+bar.appendChild(clear);
+
+function setFocus(n) {
+  focus = n;
+  try { n ? localStorage.setItem('fpl-focus-' + DATA.league, n) : localStorage.removeItem('fpl-focus-' + DATA.league); } catch (e) { /* storage unavailable */ }
+  applyFocus();
+}
+function applyFocus() {
+  bar.querySelectorAll('.chip[data-name]').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.name === focus)));
+  clear.hidden = !focus;
+  document.querySelectorAll('[data-mgr]').forEach(el => {
+    const on = !focus || el.dataset.mgr === focus;
+    if (el.tagName === 'TR') { el.classList.toggle('dim', !on); el.classList.toggle('hl', !!focus && on); }
+    else if (el.classList.contains('panel') || el.classList.contains('gaprow')) el.classList.toggle('dim', !on);
+    else el.classList.toggle('dimmed', !on);
+  });
+}
+
+document.querySelectorAll('[data-legend]').forEach(el => {
+  el.innerHTML = NAMES.map(n => `<span><i style="border-color:${COLOUR[n]}"></i>${esc(label(n))}</span>`).join('');
+});
+
+// ---------- standings ----------
+function renderTable() {
+  const maxWin = Math.max(...NAMES.map(n => M[n].win[LAST]));
+  const head = `<tr><th>#</th><th class="l">Manager</th><th>Total</th><th>GW${GWS[LAST]}</th><th>Behind</th><th>Win chance</th><th>On form</th><th>Avg / wk</th><th>Form</th><th>Hits</th></tr>`;
+  const rows = order.map((n, i) => {
+    const m = M[n];
+    const prevWin = m.win[LAST - 1];
+    const d = m.delta[m.delta.length - 1];
+    const arrow = d > 0 ? `<span class="up" title="Up ${(d * 100).toFixed(1)} pts since GW${GWS[LAST - 1]}">▲</span>` : d < 0 ? `<span class="down" title="Down ${(Math.abs(d) * 100).toFixed(1)} pts since GW${GWS[LAST - 1]}">▼</span>` : '';
+    const hits = m.hits.reduce((a, b) => a + b, 0);
+    const behind = m.behind[LAST];
+    return `<tr data-mgr="${n}">
+      <td class="pos">${i + 1}</td>
+      <td class="mgr l"><i style="background:${COLOUR[n]}"></i><span>${esc(label(n))}<br><small>${esc(META.teams[n] || '')}</small></span></td>
+      <td><b>${m.total[LAST]}</b></td><td>${m.points[LAST]}</td><td>${behind === 0 ? '—' : '−' + behind}</td>
+      <td>${arrow} ${pct(m.win[LAST])}<span class="bar" style="width:${Math.round(48 * m.win[LAST] / maxWin)}px;background:${COLOUR[n]}"></span></td>
+      <td>${pct(m.win_form[LAST])}</td>
+      <td>${fmt(m.mean[LAST], 1)}</td><td>${fmt(m.ewma[LAST], 1)}</td>
+      <td>${hits ? '−' + hits : '0'}</td></tr>`;
+  }).join('');
+  document.getElementById('standings').innerHTML = `<thead>${head}</thead><tbody>${rows}</tbody>`;
+}
+
+// ---------- chart helpers ----------
+const NS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs = {}, parent) {
+  const el = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  if (parent) parent.appendChild(el);
+  return el;
+}
+function niceTicks(lo, hi, n = 5) {
+  const span = hi - lo || 1;
+  const raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(s => s * mag).find(s => span / s <= n) || 10 * mag;
+  const t = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) t.push(+v.toFixed(10));
+  return t;
+}
+function tooltip(host) {
+  let t = host.querySelector('.tip');
+  if (!t) { t = document.createElement('div'); t.className = 'tip'; t.hidden = true; host.appendChild(t); }
+  return t;
+}
+function placeTip(tip, host, px, py) {
+  const hw = host.clientWidth;
+  tip.hidden = false;
+  const w = tip.offsetWidth;
+  let left = px + 14; if (left + w > hw - 4) left = px - w - 14; if (left < 4) left = 4;
+  tip.style.left = left + 'px'; tip.style.top = Math.max(4, py - 20) + 'px';
+}
+
+function lineChart(id, opts) {
+  const host = document.getElementById(id);
+  host.style.position = 'relative';
+  host.querySelectorAll('svg').forEach(s => s.remove());
+  const W = Math.max(300, host.clientWidth), H = opts.height || Math.round(Math.min(320, Math.max(220, W * 0.42)));
+  const pad = { l: 44, r: 12, t: 10, b: 30 };
+  const xs = opts.x, series = opts.series;
+  const vals = series.flatMap(s => s.values).filter(v => v != null);
+  let lo = opts.yMin ?? Math.min(...vals), hi = opts.yMax ?? Math.max(...vals);
+  const ticks = niceTicks(lo, hi, 5); lo = Math.min(lo, ticks[0]); hi = Math.max(hi, ticks[ticks.length - 1]);
+  const X = i => pad.l + (xs.length === 1 ? 0 : i * (W - pad.l - pad.r) / (xs.length - 1));
+  const Y = v => pad.t + (hi - v) * (H - pad.t - pad.b) / (hi - lo || 1);
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': opts.aria });
+  host.prepend(svg);
+  for (const t of ticks) {
+    svgEl('line', { x1: pad.l, x2: W - pad.r, y1: Y(t), y2: Y(t), class: t === 0 ? 'zero' : 'gridline' }, svg);
+    svgEl('text', { x: pad.l - 8, y: Y(t) + 4, 'text-anchor': 'end' }, svg).textContent = opts.yFmt(t);
+  }
+  xs.forEach((g, i) => { svgEl('text', { x: X(i), y: H - 10, 'text-anchor': 'middle' }, svg).textContent = 'GW' + g; });
+  for (const s of series) {
+    const pts = s.values.map((v, i) => v == null ? null : [X(i), Y(v)]).filter(Boolean);
+    const g = svgEl('g', { 'data-mgr': s.name }, svg);
+    svgEl('path', { d: 'M' + pts.map(p => p.join(',')).join('L'), class: 'series', style: `stroke:${s.color}` }, g);
+    const lastP = pts[pts.length - 1];
+    if (lastP) svgEl('circle', { cx: lastP[0], cy: lastP[1], r: 4, class: 'dot', style: `fill:${s.color}` }, g);
+  }
+  const xh = svgEl('line', { y1: pad.t, y2: H - pad.b, class: 'xhair', visibility: 'hidden' }, svg);
+  const hover = svgEl('g', {}, svg);
+  const tip = tooltip(host);
+  const hit = svgEl('rect', { x: pad.l - 10, y: 0, width: W - pad.l - pad.r + 20, height: H, fill: 'transparent' }, svg);
+  const move = ev => {
+    const r = svg.getBoundingClientRect();
+    const px = (ev.clientX - r.left) * W / r.width;
+    const i = Math.max(0, Math.min(xs.length - 1, Math.round((px - pad.l) / ((W - pad.l - pad.r) / Math.max(1, xs.length - 1)))));
+    xh.setAttribute('x1', X(i)); xh.setAttribute('x2', X(i)); xh.setAttribute('visibility', 'visible');
+    hover.innerHTML = '';
+    const rows = series.map(s => [s, s.values[i]]).filter(([, v]) => v != null).sort((a, b) => opts.sortAsc ? a[1] - b[1] : b[1] - a[1]);
+    for (const [s, v] of rows) if (!focus || focus === s.name) svgEl('circle', { cx: X(i), cy: Y(v), r: 4.5, class: 'dot', style: `fill:${s.color}` }, hover);
+    tip.innerHTML = `<h4>Gameweek ${xs[i]}</h4>` + rows.map(([s, v]) =>
+      `<div class="row" style="${focus && focus !== s.name ? 'opacity:.45' : ''}"><span><i style="background:${s.color}"></i>${esc(label(s.name))}</span><b>${opts.tipFmt(v)}</b></div>`).join('');
+    placeTip(tip, host, X(i) * r.width / W, ev.clientY - host.getBoundingClientRect().top);
+  };
+  hit.addEventListener('pointermove', move);
+  hit.addEventListener('pointerdown', move);
+  hit.addEventListener('pointerleave', () => { tip.hidden = true; xh.setAttribute('visibility', 'hidden'); hover.innerHTML = ''; });
+}
+
+function deltaChart(id) {
+  const host = document.getElementById(id);
+  host.style.position = 'relative';
+  host.querySelectorAll('svg').forEach(s => s.remove());
+  const gws = M[NAMES[0]].delta_gws;
+  const W = Math.max(300, host.clientWidth), H = Math.round(Math.min(320, Math.max(220, W * 0.42)));
+  const pad = { l: 44, r: 12, t: 10, b: 30 };
+  let up = 0, dn = 0;
+  gws.forEach((_, i) => {
+    const vs = NAMES.map(n => M[n].delta[i] || 0);
+    up = Math.max(up, vs.filter(v => v > 0).reduce((a, b) => a + b, 0));
+    dn = Math.min(dn, vs.filter(v => v < 0).reduce((a, b) => a + b, 0));
+  });
+  const ticks = niceTicks(dn, up, 6);
+  const lo = Math.min(dn, ticks[0]), hi = Math.max(up, ticks[ticks.length - 1]);
+  const Y = v => pad.t + (hi - v) * (H - pad.t - pad.b) / (hi - lo || 1);
+  const band = (W - pad.l - pad.r) / gws.length, bw = Math.min(56, band * 0.55);
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Change in win chance by gameweek' });
+  host.prepend(svg);
+  for (const t of ticks) {
+    svgEl('line', { x1: pad.l, x2: W - pad.r, y1: Y(t), y2: Y(t), class: t === 0 ? 'zero' : 'gridline' }, svg);
+    svgEl('text', { x: pad.l - 8, y: Y(t) + 4, 'text-anchor': 'end' }, svg).textContent = (t > 0 ? '+' : '') + Math.round(t * 100) + '%';
+  }
+  const tip = tooltip(host);
+  gws.forEach((g, i) => {
+    const cx = pad.l + band * (i + 0.5);
+    svgEl('text', { x: cx, y: H - 10, 'text-anchor': 'middle' }, svg).textContent = 'GW' + g;
+    let posBase = 0, negBase = 0;
+    const segs = NAMES.map(n => [n, M[n].delta[i] || 0]).filter(([, v]) => v !== 0);
+    for (const [n, v] of segs) {
+      const a = v > 0 ? posBase : negBase, b = a + v;
+      if (v > 0) posBase = b; else negBase = b;
+      const y1 = Y(Math.max(a, b)), y2 = Y(Math.min(a, b));
+      const h = Math.max(0, y2 - y1 - 2);
+      const rect = svgEl('rect', { x: cx - bw / 2, y: v > 0 ? y1 : y1 + 2, width: bw, height: h, rx: 2, style: `fill:${COLOUR[n]}`, 'data-mgr': n }, svg);
+      rect.addEventListener('pointerenter', ev => {
+        const others = segs.slice().sort((p, q) => q[1] - p[1]);
+        tip.innerHTML = `<h4>GW${g - 1} → GW${g}</h4>` + others.map(([m, d]) =>
+          `<div class="row" style="${m === n ? 'font-weight:600' : 'opacity:.7'}"><span><i style="background:${COLOUR[m]}"></i>${esc(label(m))}</span><b>${d > 0 ? '+' : '−'}${Math.abs(d * 100).toFixed(1)} pts</b></div>`).join('')
+          + (others.length < NAMES.length ? `<div class="row" style="opacity:.6"><span>Others</span><b>within noise</b></div>` : '');
+        const hr = host.getBoundingClientRect();
+        placeTip(tip, host, ev.clientX - hr.left, ev.clientY - hr.top);
+      });
+      rect.addEventListener('pointerleave', () => { tip.hidden = true; });
+    }
+  });
+}
+
+
+function heatmap() {
+  const n = NAMES.length;
+  const head = `<tr><th class="l">Manager</th>${Array.from({ length: n }, (_, i) => `<th style="text-align:center">${ordinal(i + 1)}</th>`).join('')}<th>Most likely</th></tr>`;
+  const rows = order.map(name => {
+    const rp = M[name].rank_prob;
+    let best = 1;
+    const cells = Array.from({ length: n }, (_, i) => {
+      const p = rp[i + 1] || 0;
+      if (p > (rp[best] || 0)) best = i + 1;
+      const strong = p >= 0.32;
+      return `<td class="cell" style="background:color-mix(in oklab, var(--seq) ${Math.round(Math.min(1, p / 0.5) * 85)}%, var(--surface));color:${strong ? 'var(--surface)' : 'var(--ink)'}" title="${esc(label(name))} finishes ${ordinal(i + 1)} in ${pct(p, 1)} of simulations">${p < 0.005 ? '·' : Math.round(p * 100)}</td>`;
+    }).join('');
+    return `<tr data-mgr="${name}"><td class="mgr l"><i style="background:${COLOUR[name]}"></i>${esc(label(name))}</td>${cells}<td>${ordinal(best)}</td></tr>`;
+  }).join('');
+  document.getElementById('heat').innerHTML = `<thead>${head}</thead><tbody>${rows}</tbody>`;
+}
+function ordinal(k) { const s = ['th', 'st', 'nd', 'rd'], v = k % 100; return k + (s[(v - 20) % 10] || s[v] || s[0]); }
+
+// ---------- gameweek by gameweek ----------
+const GW_DATA = DATA.gameweeks || {};
+const GW_LIST = Object.keys(GW_DATA).map(Number).sort((a, b) => b - a);
+let currentGw = GW_LIST[0];
+const signed = v => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v);
+
+function transferCell(r) {
+  if (!r.transfers.length) return '<span class="note">None</span>';
+  const line = t => `<div><span class="pl">${esc(t.out)} <span class="pts">${t.out_points}</span></span> → <span class="pl">${esc(t.in)} <span class="pts">${t.in_points}</span></span></div>`;
+  const shown = r.transfers.length > 3 ? r.transfers.slice(0, 2) : r.transfers;
+  let html = shown.map(line).join('');
+  if (r.transfers.length > 3) html += `<details><summary>${r.transfers.length - 2} more changes</summary>${r.transfers.slice(2).map(line).join('')}</details>`;
+  const hit = r.hit ? ` <span class="note">after −${r.hit} hit</span>` : '';
+  return `<div class="moves">${html}<div><span class="net ${r.transfer_net > 0 ? 'up' : r.transfer_net < 0 ? 'down' : ''}">${signed(r.transfer_net)}</span> <span class="note">that week</span>${hit}</div></div>`;
+}
+
+function renderGameweek(gw) {
+  currentGw = gw;
+  document.querySelectorAll('.gwtab').forEach(b => b.setAttribute('aria-selected', String(Number(b.dataset.gw) === gw)));
+  document.getElementById('commentary').innerHTML = (META.commentary || {})[gw] || '<p class="sub">No write-up for this week yet.</p>';
+  const rows = GW_DATA[gw];
+  const names = Object.keys(rows).sort((a, b) => rows[b].net_points - rows[a].net_points);
+  const head = '<tr><th class="l">Manager</th><th style="text-align:right">Pts</th><th>Star</th><th>Captain</th><th>Transfers</th><th>Benched</th></tr>';
+  const body = names.map(n => {
+    const r = rows[n];
+    const cap = r.captain.player ? `<span class="pl">${esc(r.captain.player)} <span class="pts">${r.captain.points}</span></span>${r.captain.vice_stood_in ? '<div class="note">vice stood in</div>' : ''}` : '<span class="note">—</span>';
+    const missed = r.missed.length ? r.missed.map(m => `<div class="pl">${esc(m.player)} <span class="pts">${m.points}</span></div>`).join('') : '<span class="note">—</span>';
+    return `<tr data-mgr="${n}">
+      <td class="mgr l"><i style="background:${COLOUR[n]}"></i><span>${esc(label(n))}${r.chip ? `<span class="badge">${esc(r.chip)}</span>` : ''}</span></td>
+      <td class="score">${r.points}${r.hit ? `<small>−${r.hit} hit</small>` : ''}</td>
+      <td><span class="pl">${esc(r.star.player)} <span class="pts">${r.star.points}</span></span></td>
+      <td>${cap}</td><td>${transferCell(r)}</td><td>${missed}</td></tr>`;
+  }).join('');
+  document.getElementById('gwtable').innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+  applyFocus();
+}
+
+const tabs = document.getElementById('gwtabs');
+for (const gw of GW_LIST) {
+  const b = document.createElement('button');
+  b.className = 'gwtab'; b.type = 'button'; b.dataset.gw = gw; b.textContent = 'GW' + gw;
+  b.addEventListener('click', () => renderGameweek(gw));
+  tabs.appendChild(b);
+}
+if (!GW_LIST.length) document.getElementById('gameweeks').hidden = true;
+
+function renderSeasonTransfers() {
+  const st = DATA.season_transfers;
+  if (!st) { document.getElementById('transfers').hidden = true; return; }
+  const names = Object.keys(st).sort((a, b) => st[b].gain - st[a].gain);
+  const net = v => `<span class="net ${v > 0 ? 'up' : v < 0 ? 'down' : ''}">${signed(v)}</span>`;
+  const move = m => m ? `<span class="pl">${esc(m.out)} → ${esc(m.in)}</span> <span class="net ${m.gain > 0 ? 'up' : 'down'}">${signed(m.gain)}</span><div class="note">GW${m.gw}, ${m.in_points} v ${m.out_points} over ${m.weeks} wk${m.weeks === 1 ? '' : 's'}</div>` : '<span class="note">—</span>';
+  const head = '<tr><th class="l">Manager</th><th style="text-align:right">Moves</th><th style="text-align:right">Hits</th><th style="text-align:right">Transfers</th><th style="text-align:right">Chip squads</th><th style="text-align:right">Total</th><th>Best move</th><th>Worst move</th><th>Chips used</th></tr>';
+  const body = names.map(n => {
+    const r = st[n];
+    const chips = r.chips.length ? r.chips.map(c => `<div class="pl">${esc(c.chip)} <span class="pts">GW${c.gw}</span></div>`).join('') : '<span class="note">None yet</span>';
+    const chipSquads = r.moves.some(m => m.chip) ? net(r.gain_chips) : '<span class="note">—</span>';
+    return `<tr data-mgr="${n}">
+      <td class="mgr l"><i style="background:${COLOUR[n]}"></i>${esc(label(n))}</td>
+      <td class="num" style="text-align:right">${r.transfers}</td>
+      <td class="num" style="text-align:right">${r.hits ? '−' + r.hits : '0'}</td>
+      <td style="text-align:right">${net(r.gain_regular)}</td>
+      <td style="text-align:right">${chipSquads}</td>
+      <td class="score">${signed(r.gain)}</td>
+      <td>${move(r.best)}</td><td>${move(r.worst)}</td><td>${chips}</td></tr>`;
+  }).join('');
+  document.getElementById('season-transfers').innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+}
+
+// ---------- insights ----------
+const INS = DATA.insights;
+const CHIP_SHORT = { wildcard: 'WC', freehit: 'FH', bboost: 'BB', '3xc': 'TC' };
+const CHIP_NAME = { wildcard: 'Wildcard', freehit: 'Free hit', bboost: 'Bench boost', '3xc': 'Triple captain' };
+let gapPeriod = 'season';
+
+// Each manager's captain points minus the average of the other managers' captains that week.
+function captainVsRivals() {
+  const cap = INS.captaincy, names = Object.keys(cap);
+  const weeks = cap[names[0]].weeks.length;
+  const out = Object.fromEntries(names.map(n => [n, { total: 0, weeks: [] }]));
+  for (let i = 0; i < weeks; i++) {
+    const sum = names.reduce((a, n) => a + cap[n].weeks[i].points, 0);
+    for (const n of names) {
+      const others = (sum - cap[n].weeks[i].points) / (names.length - 1);
+      const diff = cap[n].weeks[i].points - others;
+      out[n].weeks.push({ diff, others });
+      out[n].total += diff;
+    }
+  }
+  return out;
+}
+
+function renderCaptaincy() {
+  const vs = captainVsRivals();
+  const rows = Object.entries(INS.captaincy).sort((a, b) => vs[b[0]].total - vs[a[0]].total);
+  const head = '<tr><th class="l">Manager</th><th style="text-align:right">Captain pts</th><th style="text-align:right">vs rivals</th><th style="text-align:right">Best available</th><th style="text-align:right">Lost</th><th>Chips by GW19</th><th>GW20–38</th></tr>';
+  const chipTag = c => `<span class="chiptag ${c.status}" title="${CHIP_NAME[c.chip]}${c.used_gw ? ', played GW' + c.used_gw : c.status === 'expired' ? ', expired' : ', available until GW' + c.stop}">${CHIP_SHORT[c.chip]}${c.used_gw ? ' GW' + c.used_gw : ''}</span>`;
+  const body = rows.map(([n, r]) => {
+    const slots = INS.chips[n];
+    const first = slots.filter(c => c.stop <= 19), second = slots.filter(c => c.start >= 20);
+    return `<tr data-mgr="${n}">
+      <td class="mgr l"><i style="background:${COLOUR[n]}"></i>${esc(label(n))}</td>
+      <td class="num" style="text-align:right">${r.points}</td>
+      <td style="text-align:right"><span class="net ${vs[n].total > 0.5 ? 'up' : vs[n].total < -0.5 ? 'down' : ''}">${signed(Math.round(vs[n].total))}</span></td>
+      <td class="num" style="text-align:right">${r.best}</td>
+      <td class="score" style="font-size:16px">${r.lost ? '−' + r.lost : '0'}</td>
+      <td><div class="chipset">${first.map(chipTag).join('')}</div></td>
+      <td><div class="chipset">${second.map(chipTag).join('')}</div></td></tr>`;
+  }).join('');
+  document.getElementById('captaincy-table').innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+
+  const gws = INS.captaincy[rows[0][0]].weeks.map(w => w.gw);
+  const popular = gws.map(gw => INS.most_captained[gw]);
+  const weekHead = `<tr><th class="l">Manager</th>${gws.map(g => `<th style="text-align:center">GW${g}</th>`).join('')}</tr>`
+    + `<tr><td class="l note">Most picked</td>${popular.map(p => `<td class="heatcell note">${p && p.managers > 1 ? `${esc(p.player)}<small>${p.managers} of ${NAMES.length}</small>` : 'No consensus'}</td>`).join('')}</tr>`;
+  const weekBody = rows.map(([n, r]) => `<tr data-mgr="${n}"><td class="mgr l"><i style="background:${COLOUR[n]}"></i>${esc(label(n))}</td>${r.weeks.map((w, i) => {
+    const d = vs[n].weeks[i].diff;
+    const share = Math.round(Math.min(1, Math.abs(d) / 20) * 50);
+    const tone = d > 0 ? 'var(--win)' : 'var(--loss)';
+    const bg = Math.abs(d) < 0.5 ? 'var(--surface)' : `color-mix(in oklab, ${tone} ${share}%, var(--surface))`;
+    const title = `${label(n)} GW${w.gw}: ${w.captain || 'no captain'} ${w.points}; rivals averaged ${vs[n].weeks[i].others.toFixed(1)}`;
+    return `<td class="heatcell" style="background:${bg}" title="${esc(title)}">${esc(w.captain || '—')}<small>${w.points} pts · ${signed(Math.round(d))}</small></td>`;
+  }).join('')}</tr>`).join('');
+  document.getElementById('captaincy-weeks').innerHTML = `<thead>${weekHead}</thead><tbody>${weekBody}</tbody>`;
+}
+
+function renderGap() {
+  const leader = INS.leader;
+  const rows = Object.entries(INS.gap).filter(([, g]) => g).map(([n, g]) => [n, g[gapPeriod]])
+    .sort((a, b) => b[1].gap - a[1].gap);
+  const recentN = Object.values(INS.gap).find(Boolean)?.recent_gws;
+  document.getElementById('gap-sub').textContent = `Each manager against ${label(leader)}, the current leader. Players both start cancel out; what's left is points from players only one of you started, the captaincy difference, and hits. The three always add up to the points gap${gapPeriod === 'recent' ? ` over the last ${recentN} gameweeks` : ''}.`;
+  let maxAbs = 1;
+  for (const [, g] of rows) {
+    const parts = [g.unique, g.captaincy, g.hits];
+    maxAbs = Math.max(maxAbs, parts.filter(v => v > 0).reduce((a, b) => a + b, 0), -parts.filter(v => v < 0).reduce((a, b) => a + b, 0));
+  }
+  const pos = v => 50 + (v / maxAbs) * 48;
+  const html = rows.map(([n, g]) => {
+    let up = 0, down = 0;
+    const segs = [['unique', g.unique, 'var(--ink-2)'], ['captaincy', g.captaincy, 'var(--seq)'], ['hits', g.hits, 'var(--loss)']].filter(([, v]) => v).map(([k, v, c]) => {
+      const a = v > 0 ? up : down, b = a + v;
+      if (v > 0) up = b; else down = b;
+      const left = Math.min(pos(a), pos(b)), width = Math.abs(pos(b) - pos(a));
+      return `<div class="seg" style="left:${left}%;width:calc(${width}% - 2px);margin-left:1px;background:${c}" title="${k}: ${signed(v)}"></div>`;
+    }).join('');
+    const full = INS.gap[n];
+    const diffs = gapPeriod === 'season' && full.only_mine.length
+      ? `Only ${esc(label(n))}: ${full.only_mine.map(esc).join(', ')} · Only ${esc(label(leader))}: ${full.only_theirs.map(esc).join(', ')}` : '';
+    return `<div class="gaprow" data-mgr="${n}">
+      <div class="who"><i style="background:${COLOUR[n]}"></i>${esc(label(n))}</div>
+      <div class="track" title="Players ${signed(g.unique)} · captaincy ${signed(g.captaincy)} · hits ${signed(g.hits)}"><div class="axis" style="left:50%"></div>${segs}</div>
+      <div class="total">${signed(g.gap)}</div>
+      ${diffs ? `<div class="diffs">${diffs}</div>` : ''}</div>`;
+  }).join('');
+  document.getElementById('gaprows').innerHTML = html;
+  document.getElementById('gap-season').setAttribute('aria-pressed', String(gapPeriod === 'season'));
+  document.getElementById('gap-recent').setAttribute('aria-pressed', String(gapPeriod === 'recent'));
+  applyFocus();
+}
+document.getElementById('gap-season').addEventListener('click', () => { gapPeriod = 'season'; renderGap(); });
+document.getElementById('gap-recent').addEventListener('click', () => { gapPeriod = 'recent'; renderGap(); });
+
+function renderOutlook() {
+  const entries = Object.entries(INS.outlook);
+  const gws = entries[0][1].map(w => w.gw);
+  const avg = weeks => { const d = weeks.map(w => w.difficulty).filter(v => v != null); return d.length ? d.reduce((a, b) => a + b, 0) / d.length : null; };
+  entries.sort((a, b) => avg(a[1]) - avg(b[1]));
+  document.getElementById('outlook-sub').textContent = `FPL's own fixture difficulty (1 easiest, 5 hardest), averaged over each manager's 15 players as of GW${GWS[LAST]}. Squads change at each deadline, and picks stay private until then. Easiest run first.`;
+  const cell = w => {
+    if (w.difficulty == null) return '<td class="heatcell"><span class="note">blank</span></td>';
+    // Squad averages sit around 2.5-4, so the shade spans that range rather than the full 1-5 scale.
+    const share = Math.round(Math.max(0, Math.min(1, (w.difficulty - 2.5) / 1.5)) * 75);
+    const notes = [w.doubles ? `${w.doubles} double` : '', w.blanks ? `${w.blanks} blank` : ''].filter(Boolean).join(' · ');
+    return `<td class="heatcell" style="background:color-mix(in oklab, var(--seq) ${share}%, var(--surface));color:${share > 45 ? 'var(--surface)' : 'var(--ink)'}">${w.difficulty.toFixed(1)}${notes ? `<small>${notes}</small>` : ''}</td>`;
+  };
+  const head = `<tr><th class="l">Manager</th>${gws.map(g => `<th style="text-align:center">GW${g}</th>`).join('')}<th style="text-align:right">Average</th></tr>`;
+  const body = entries.map(([n, weeks]) => `<tr data-mgr="${n}"><td class="mgr l"><i style="background:${COLOUR[n]}"></i>${esc(label(n))}</td>${weeks.map(cell).join('')}<td class="score" style="font-size:16px">${avg(weeks)?.toFixed(2) ?? '–'}</td></tr>`).join('');
+  document.getElementById('outlook-table').innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+}
+
+function renderBench() {
+  const rows = Object.entries(INS.bench).sort((a, b) => b[1].bench_unused - a[1].bench_unused);
+  const head = '<tr><th class="l">Manager</th><th style="text-align:right">Bench points unused</th><th style="text-align:right">Auto-subs</th><th style="text-align:right">Points they brought</th></tr>';
+  const body = rows.map(([n, r]) => `<tr data-mgr="${n}"><td class="mgr l"><i style="background:${COLOUR[n]}"></i>${esc(label(n))}</td><td class="score" style="font-size:16px">${r.bench_unused}</td><td class="num" style="text-align:right">${r.autosubs}</td><td class="num" style="text-align:right">${r.autosub_points}</td></tr>`).join('');
+  document.getElementById('bench-table').innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+}
+
+function renderH2H() {
+  const grid = INS.h2h;
+  const names = [...order];
+  const head = `<tr><th>v</th>${names.map(n => `<th title="${esc(label(n))}">${esc(label(n))}</th>`).join('')}<th>W–D–L</th></tr>`;
+  const body = names.map(a => {
+    let w = 0, d = 0, l = 0;
+    const cells = names.map(b => {
+      if (a === b) return '<td class="self">·</td>';
+      const [cw, cd, cl] = grid[a][b];
+      w += cw; d += cd; l += cl;
+      const net = cw - cl, games = cw + cd + cl || 1;
+      const tone = net > 0 ? 'var(--win)' : net < 0 ? 'var(--loss)' : 'var(--surface)';
+      const share = Math.round(Math.abs(net) / games * 55);
+      return `<td class="num" style="background:color-mix(in oklab, ${tone} ${share}%, var(--surface))" title="${esc(label(a))} v ${esc(label(b))}: ${cw} won, ${cd} drawn, ${cl} lost">${cw}–${cl}</td>`;
+    }).join('');
+    return `<tr data-mgr="${a}"><td class="mgr l"><i style="background:${COLOUR[a]}"></i>${esc(label(a))}</td>${cells}<td class="num"><b>${w}–${d}–${l}</b></td></tr>`;
+  }).join('');
+  document.getElementById('h2h-table').innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+}
+
+function renderInsights() {
+  if (!INS) { ['captaincy', 'gap', 'outlook', 'bench', 'h2h'].forEach(id => { document.getElementById(id).hidden = true; }); return; }
+  renderCaptaincy(); renderGap(); renderOutlook(); renderBench(); renderH2H();
+}
+
+function renderAll() {
+  renderTable();
+  const ser = key => NAMES.map(n => ({ name: n, color: COLOUR[n], values: M[n][key] }));
+  lineChart('ch-win', { x: DATA.win_gws, series: ser('win'), yMin: 0, yFmt: t => Math.round(t * 100) + '%', tipFmt: v => pct(v, 1), aria: 'Win chance by gameweek' });
+  deltaChart('ch-delta');
+  lineChart('ch-behind', { x: GWS, series: ser('behind').map(s => ({ ...s, values: s.values.map(v => -v) })), yMax: 0, yFmt: t => t === 0 ? '0' : '−' + Math.abs(t), tipFmt: v => v === 0 ? 'leader' : '−' + Math.abs(v), aria: 'Points behind leader by gameweek' });
+  lineChart('ch-weekly', { x: GWS, series: ser('points'), yMin: 0, yFmt: t => String(t), tipFmt: v => v + ' pts', aria: 'Gameweek scores' });
+  heatmap();
+  if (currentGw) renderGameweek(currentGw);
+  renderSeasonTransfers();
+  renderInsights();
+  applyFocus();
+}
+
+document.getElementById('provisional').textContent = META.provisional;
+document.getElementById('footer').textContent = `League ${DATA.league_id} · data pulled ${META.pulled} · ${DATA.n_iter.toLocaleString()} simulations per gameweek · same model as FPL.ipynb`;
+renderAll();
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderAll, 150); });
+</script>

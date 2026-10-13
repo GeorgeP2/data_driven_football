@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FPL League Pages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #f3f6f2; --surface: #fcfdfb; --ink: #17211b; --ink-2: #47544c;
+  --rule: #dbe2dc; --accent: #0f6b3c; --stripe-a: #e6eee6; --stripe-b: #edf3ec;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1511; --surface: #151d18; --ink: #e7eee9; --ink-2: #b3c0b7;
+  --rule: #29342d; --accent: #56c48a; --stripe-a: #131b16; --stripe-b: #17211a;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0f1511; --surface: #151d18; --ink: #e7eee9; --ink-2: #b3c0b7;
+  --rule: #29342d; --accent: #56c48a; --stripe-a: #131b16; --stripe-b: #17211a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 "Barlow", "Helvetica Neue", Arial, sans-serif; }
+header { background: repeating-linear-gradient(90deg, var(--stripe-a) 0 56px, var(--stripe-b) 56px 112px); border-bottom: 1px solid var(--rule); }
+.wrap { max-width: 640px; margin: 0 auto; padding: 32px 16px; }
+h1 { font: 700 clamp(38px, 8vw, 56px)/0.95 "Barlow Condensed", "Arial Narrow", sans-serif; text-transform: uppercase; margin: 0 0 10px; }
+p { margin: 0; color: var(--ink-2); }
+ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+a { display: block; padding: 16px 18px; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; color: var(--ink); text-decoration: none; font: 700 24px "Barlow Condensed", "Arial Narrow", sans-serif; text-transform: uppercase; letter-spacing: 0.02em; }
+a:hover { border-color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+<header><div class="wrap">
+  <h1>FPL League Pages</h1>
+  <p>Standings, gameweek write-ups and simulated title chances for two mini-leagues, refreshed after each gameweek.</p>
+</div></header>
+<main class="wrap">
+  <ul>
+    <li><a href="boys_fpl.html">The Boys FPL</a></li>
+    <li><a href="thg_fpl.html">THG Ing League</a></li>
+  </ul>
+</main>

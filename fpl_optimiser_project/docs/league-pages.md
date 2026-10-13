@@ -41,7 +41,16 @@ first-half chip not played by GW19 shows as expired. Tests: `make check` from th
 
 `export --cached` skips the pull and reuses the `fpl_entry_*_history.csv` files in `data/`.
 
-Then ask Claude to republish the two HTML files to the existing artifacts so the links stay the same:
+Then publish. The pages are hosted on GitHub Pages from `site/`, which `.github/workflows/pages.yml`
+deploys on every push to `main` that touches it:
+
+```
+cp outputs/league_pages/*_fpl.html site/
+git add site commentary && git commit -m "League pages: GWNN" && git push
+```
+
+They are also Claude artifacts. To keep those current, ask Claude to republish the two HTML files to
+the existing artifacts so the links stay the same:
 
 - The Boys FPL — https://claude.ai/artifact/RxGhGZqzjEyhp4dAsh5xmN
 - THG Ing League — https://claude.ai/artifact/T5C8hPe8qUqpbkwfNBZgDD
