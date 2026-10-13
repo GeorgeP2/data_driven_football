@@ -1,0 +1,20 @@
+{
+  "boys": {
+    "league_id": 123456,
+    "entries": {
+      "1111111": "me",
+      "2222222": "rival",
+      "3333333": "another"
+    },
+    "labels": {}
+  },
+  "work": {
+    "league_id": 654321,
+    "entries": {
+      "1111111": "me",
+      "4444444": "samh",
+      "5555555": "sams"
+    },
+    "labels": {"samh": "Sam H", "sams": "Sam S"}
+  }
+}

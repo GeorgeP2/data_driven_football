@@ -32,38 +32,26 @@ from fpl_optimiser.leagues.gameweeks import (
 HISTORY_DIR = Path("data")
 OUT_DIR = Path("outputs/league_pages")
 
-# Entry ids are reissued every season; keep these in step with FPL.ipynb's Parameters cell.
-# Keys are the short names the notebook uses; order fixes each manager's colour. Keep them free
-# of '_': FPL.ipynb splits win-prob column names on it, hence surnames for the two Sams.
-LEAGUES: dict[str, dict[str, Any]] = {
-    "boys": {
-        "league_id": 76315,
-        "entries": {
-            552800: "george",
-            436170: "mark",
-            377186: "andy",
-            975972: "chris",
-            1475697: "david",
-        },
-        "labels": {},
-    },
-    "thg": {
-        "league_id": 1496795,
-        "entries": {
-            552800: "george",
-            5918396: "michael",
-            6674889: "eddie",
-            2773049: "james",
-            792771: "andrew",
-            3681315: "dom",
-            7199701: "hickey",
-            4527146: "andy",
-            2825794: "saunders",
-            2512675: "derek",
-        },
-        "labels": {"hickey": "Sam H", "saunders": "Sam S"},
-    },
-}
+LEAGUES_PATH = Path("leagues.json")
+"""Which leagues to export and who is in them. Git-ignored, because it names real people: copy
+leagues.example.json to leagues.json and fill it in."""
+
+
+def load_leagues(path: Path = LEAGUES_PATH) -> dict[str, dict[str, Any]]:
+    """Read the league config, with entry ids as ints.
+
+    Entry ids are reissued every season. Keys in "entries" are the short names the notebook
+    uses, and their order fixes each manager's colour. Keep the names free of '_':
+    FPL.ipynb splits win-prob column names on it, hence "labels" for display names.
+    """
+    if not path.is_file():
+        raise SystemExit(f"No {path}; copy leagues.example.json to {path} and fill it in.")
+    leagues: dict[str, dict[str, Any]] = json.loads(path.read_text())
+    for cfg in leagues.values():
+        cfg["entries"] = {int(entry): name for entry, name in cfg["entries"].items()}
+        cfg.setdefault("labels", {})
+    return leagues
+
 
 # Same settings as the notebook's Parameters cell.
 TOTAL_GWS = 38
@@ -234,10 +222,10 @@ def export_league(
 
 
 def run(cached: bool = False) -> None:
-    """Export every league in LEAGUES. FPL.ipynb calls this directly."""
+    """Export every league in leagues.json. FPL.ipynb calls this directly."""
     source = GameweekSource()
     common = {**season_meta(source), "pulled": dt.date.today().strftime("%-d %b %Y")}
-    for key, cfg in LEAGUES.items():
+    for key, cfg in load_leagues().items():
         export_league(key, cfg, refresh=not cached, common=common, source=source)
 
 

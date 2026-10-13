@@ -229,6 +229,10 @@ __marimo__/
 # Personal pool state (copy config.example.json -> config.json)
 lms_project/config.json
 
+# FPL mini-league members and write-ups (copy leagues.example.json -> leagues.json)
+fpl_optimiser_project/leagues.json
+fpl_optimiser_project/commentary/
+
 # Local notes
 lms_project/conversation.md
 
