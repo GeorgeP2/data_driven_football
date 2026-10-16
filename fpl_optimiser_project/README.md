@@ -370,8 +370,11 @@ own. See [docs/league-pages.md](docs/league-pages.md).
 | [vaastav/Fantasy-Premier-League](https://github.com/vaastav/Fantasy-Premier-League) | Per-gameweek archive of past seasons | Backtest, forecast evaluation, GW1 carry-over |
 
 Everything is fetched by the code on demand. API and archive caches go to `~/.cache/fpl_optimiser/`;
-league histories and picks go to `data/`, run outputs to `outputs/` (both git-ignored). The FPL API
-is unofficial and undocumented, so it is used for personal analysis only.
+league histories and picks go to `data/`, run outputs to `outputs/` (both git-ignored). Of those, the
+ones that cannot be regenerated — weekly pool forecasts, API snapshots, and league data FPL wipes at
+the summer reset — are archived to a private S3 bucket with `make sync`. Weekly decision and plan
+records live in `records/` and are committed. The FPL API is unofficial and undocumented, so it is
+used for personal analysis only.
 
 ## Docs
 

@@ -50,6 +50,16 @@ keeping the player you have. Small enough that it never overrides a genuine gain
 
 
 @dataclass(frozen=True)
+class PlannedGameweek:
+    """One gameweek of the plan. Only the first is executed; the rest inform it."""
+
+    gameweek: int
+    transfers_in: tuple[Player, ...]
+    transfers_out: tuple[Player, ...]
+    hits: int
+
+
+@dataclass(frozen=True)
 class TransferDecision:
     """The squad to field, and what it cost to get there."""
 
@@ -69,6 +79,14 @@ class TransferDecision:
     hits, so it is only meaningful *compared with another solve over the same pool and
     horizon*. That comparison is exactly what valuing a wildcard needs, which is why it is
     exposed at all."""
+
+    plan: tuple[PlannedGameweek, ...] = ()
+    """Every gameweek of the horizon as the solver left it, this one first.
+
+    Only the first entry is executed; the rest are re-solved next week. They are kept because a
+    move can only make sense as the first step of a chain — selling cheap now to fund a bigger
+    buy later — and without the rest of the plan that reason is lost. Empty for the one-week
+    solver, which has no later weeks to report."""
 
     @property
     def transfer_count(self) -> int:

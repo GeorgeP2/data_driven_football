@@ -16,6 +16,7 @@ make setup          # create .venv, install core+dev+notebooks, install pre-comm
 make check          # lint + typecheck + tests (same as CI)
 make format         # ruff fix + format
 make new-project name="Title" category=ml   # scaffold <package>_project/ from _template
+make sync           # archive un-regenerable outputs to personal S3 (needs .env; see .env.example)
 ```
 
 Use `.venv/bin/...` for tools.
@@ -33,6 +34,8 @@ Use `.venv/bin/...` for tools.
   CLI paths point there (`data/fd_cache/`, `outputs/...`).
 - mypy checks only the shared package (`src/`).
 - Notebook outputs are stripped by nbstripout on commit.
+- The `[default]` AWS profile on the dev machine is a work account. `scripts/s3_archive.sh` takes the
+  profile from `.env`, refuses `default`, and checks the account ID before copying anything.
 
 ## Conventions
 

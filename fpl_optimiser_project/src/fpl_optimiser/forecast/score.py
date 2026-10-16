@@ -2,8 +2,8 @@
 
     PYTHONPATH=src python -m fpl_optimiser.forecast.score 5
 
-Reads outputs/forecast_log/gw<NN>_<season>.json, pulls the real points from the FPL API and
-prints forecast-vs-actual per player. Also scores the squad George *actually* fielded,
+Reads records/gw<NN>_<season>.json, pulls the real points from the FPL API and
+prints forecast-vs-actual per player. Also scores the squad the manager *actually* fielded,
 which may differ from the recommendation the file records.
 """
 
@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 API = "https://fantasy.premierleague.com/api"
-LOG_DIR = Path("outputs/forecast_log")
+RECORDS_DIR = Path("records")
 
 
 def _get(url: str) -> Any:
@@ -26,9 +26,9 @@ def _get(url: str) -> Any:
 
 
 def _load_record(gameweek: int) -> dict[str, Any]:
-    matches = sorted(LOG_DIR.glob(f"gw{gameweek:02d}_*.json"))
+    matches = sorted(RECORDS_DIR.glob(f"gw{gameweek:02d}_*.json"))
     if not matches:
-        available = sorted(p.name for p in LOG_DIR.glob("gw*.json"))
+        available = sorted(p.name for p in RECORDS_DIR.glob("gw*.json"))
         raise SystemExit(f"No forecast recorded for GW{gameweek}. Available: {available or 'none'}")
     return json.loads(matches[0].read_text())
 

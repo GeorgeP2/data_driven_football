@@ -11,11 +11,13 @@ that a manager said something ominous in a press conference an hour ago.
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import logging
 import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +26,7 @@ from fpl_optimiser.backtest.chips import Chip, ChipState, choose_chip
 from fpl_optimiser.backtest.history import GameweekRecord
 from fpl_optimiser.backtest.planner import DEFAULT_DISCOUNT, DEFAULT_HORIZON, plan_transfers
 from fpl_optimiser.backtest.points_model import PointsModel
+from fpl_optimiser.backtest.transfers import PlannedGameweek
 from fpl_optimiser.backtest.wildcard import wildcard_gain
 from fpl_optimiser.live import (
     MODEL_FROM_GAMEWEEK,
@@ -41,6 +44,12 @@ from fpl_optimiser.players import Player
 from fpl_optimiser.rules import GameRules, TransferRules
 
 logger = logging.getLogger("fpl_optimiser")
+
+RECORDS_DIR = Path("records")
+"""Small, decision-bearing logs that are committed: the planned path and the hand-written record."""
+
+SNAPSHOT_DIR = Path("outputs/snapshots")
+"""Raw API payloads, kept because FPL does not: injury flags and prices are overwritten in place."""
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -120,7 +129,28 @@ def build_parser() -> argparse.ArgumentParser:
             "Write this run's expected points for every player, for every gameweek in the "
             "horizon, to DIR/pool_gw<NN>_<season>.json. Scored later by "
             "fpl_optimiser.forecast.calibrate. Logging the whole pool rather than the chosen XI is "
-            "deliberate: ~650 predictions a week instead of 11."
+            "deliberate: ~650 predictions a week instead of 11. Also writes the planned "
+            "transfers to --records-dir and a snapshot of bootstrap-static to --snapshot-dir."
+        ),
+    )
+    parser.add_argument(
+        "--records-dir",
+        type=Path,
+        default=RECORDS_DIR,
+        metavar="DIR",
+        help=(
+            "Where --log-forecast writes plan_gw<NN>_<season>.json, the planned transfers for "
+            f"every week of the horizon (default: {RECORDS_DIR}, which is committed)."
+        ),
+    )
+    parser.add_argument(
+        "--snapshot-dir",
+        type=Path,
+        default=SNAPSHOT_DIR,
+        metavar="DIR",
+        help=(
+            "Where --log-forecast saves the bootstrap-static this run saw, gzipped "
+            f"(default: {SNAPSHOT_DIR})."
         ),
     )
     parser.add_argument("-v", "--verbose", action="store_true")
@@ -185,6 +215,7 @@ def format_advice(
     gameweek_points: Mapping[int, float] | None = None,
     horizon_points: Mapping[int, float] | None = None,
     horizon: Sequence[int] = (),
+    plan: Sequence[PlannedGameweek] = (),
 ) -> str:
     """Render the advice.
 
@@ -248,6 +279,17 @@ def format_advice(
     lines.append(
         f"Forecast for the XI (captain doubled): {squad.starting_expected_points:.1f} points"
     )
+
+    if len(plan) > 1:
+        lines.append("")
+        lines.append("PLAN AHEAD (why this week's moves were made; re-planned every week)")
+        for week in plan[1:]:
+            moves = ", ".join(
+                f"{out.name} -> {into.name}"
+                for out, into in pair_transfers(week.transfers_out, week.transfers_in)
+            )
+            hit = f"  (-{week.hits * 4})" if week.hits else ""
+            lines.append(f"  GW{week.gameweek:<3} {moves or 'roll the transfer'}{hit}")
     return "\n".join(lines)
 
 
@@ -337,6 +379,72 @@ def write_forecast_log(
         )
         + "\n"
     )
+    return destination
+
+
+def write_plan_log(
+    directory: Path,
+    *,
+    payload: Mapping[str, Any],
+    gameweek: int,
+    plan: Sequence[PlannedGameweek],
+) -> Path:
+    """Record the whole planned path, so a move made as the first step of a chain keeps its reason.
+
+    Next week's plan is solved from scratch and may abandon the chain — which is correct, the
+    cash is still there to spend — but comparing consecutive logs is the only way to see how
+    often that happens, and so how much the far end of the horizon is worth trusting.
+    """
+    season = season_label(payload)
+    directory.mkdir(parents=True, exist_ok=True)
+    destination = directory / f"plan_gw{gameweek:02d}_{season}.json"
+    weeks = [
+        {
+            "gameweek": week.gameweek,
+            "transfers": [
+                {"out": out.name, "out_id": out.id, "in": into.name, "in_id": into.id}
+                for out, into in pair_transfers(week.transfers_out, week.transfers_in)
+            ],
+            "hits": week.hits,
+        }
+        for week in plan
+    ]
+    destination.write_text(
+        json.dumps(
+            {
+                "season": season,
+                "planned_at_gameweek": gameweek,
+                "source": "cli_advise --log-forecast",
+                "weeks": weeks,
+            },
+            indent=1,
+            ensure_ascii=False,
+        )
+        + "\n"
+    )
+    return destination
+
+
+def write_bootstrap_snapshot(
+    directory: Path,
+    *,
+    payload: Mapping[str, Any],
+    gameweek: int,
+    now: datetime | None = None,
+) -> Path:
+    """Save the `bootstrap-static` this run planned from, gzipped.
+
+    The API overwrites injury flags, news and prices in place and keeps no history of them, which
+    is why the backtest cannot see availability and so understates the live system. A copy per
+    run is the only way that history comes to exist. The timestamp is in the name because two
+    runs before one deadline can see different flags, and both are worth keeping.
+    """
+    season = season_label(payload)
+    stamp = (now or datetime.now(UTC)).strftime("%Y%m%dT%H%M%SZ")
+    directory.mkdir(parents=True, exist_ok=True)
+    destination = directory / f"bootstrap_gw{gameweek:02d}_{season}_{stamp}.json.gz"
+    with gzip.open(destination, "wt", encoding="utf-8") as handle:
+        json.dump(payload, handle, ensure_ascii=False)
     return destination
 
 
@@ -439,6 +547,10 @@ def main(argv: list[str] | None = None) -> int:
                 model_from=args.model_from,
             )
             logger.info("Forecast for %d players logged to %s", len(views[0].pool), written)
+            snapshot = write_bootstrap_snapshot(
+                args.snapshot_dir, payload=payload, gameweek=gameweek
+            )
+            logger.info("bootstrap-static saved to %s", snapshot)
 
         decision = plan_transfers(
             views,
@@ -455,6 +567,12 @@ def main(argv: list[str] | None = None) -> int:
                 else DEFAULT_BENCH_WEIGHTS
             ),
         )
+
+        if args.log_forecast is not None:
+            written = write_plan_log(
+                args.records_dir, payload=payload, gameweek=gameweek, plan=decision.plan
+            )
+            logger.info("Plan over %d gameweek(s) logged to %s", len(decision.plan), written)
 
         chip = None
         chip_reason = ""
@@ -510,6 +628,7 @@ def main(argv: list[str] | None = None) -> int:
             gameweek_points=points_by_gameweek[gameweek],
             horizon_points=horizon_value(points_by_gameweek),
             horizon=weeks,
+            plan=decision.plan,
         )
         + "\n"
     )

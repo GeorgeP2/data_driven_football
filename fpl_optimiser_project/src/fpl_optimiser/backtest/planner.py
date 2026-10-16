@@ -24,12 +24,11 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from dataclasses import dataclass
 
 from ortools.sat.python import cp_model
 
 from fpl_optimiser.backtest.season import GameweekView
-from fpl_optimiser.backtest.transfers import TransferDecision
+from fpl_optimiser.backtest.transfers import PlannedGameweek, TransferDecision
 from fpl_optimiser.model import (
     DEFAULT_BENCH_WEIGHTS,
     DEFAULT_SOLVER_TIMEOUT_SECONDS,
@@ -60,16 +59,6 @@ the 41st-best midfielder was never going into the squad."""
 
 TRANSFER_TIEBREAK = 1
 """A hundredth of a point per transfer, to break ties toward holding rather than churning."""
-
-
-@dataclass(frozen=True)
-class PlannedGameweek:
-    """One gameweek of the plan. Only the first is executed; the rest inform it."""
-
-    gameweek: int
-    transfers_in: tuple[Player, ...]
-    transfers_out: tuple[Player, ...]
-    hits: int
 
 
 def _shortlist(
@@ -238,7 +227,7 @@ def plan_transfers(
     # horizon helps: it lets the planner deliberately skip a week to afford two moves the next.
     cap = transfer_rules.max_free_transfers
     available = model.NewIntVar(free_transfers, free_transfers, "ft_0")
-    first_hits: cp_model.IntVar | None = None
+    hits_by_week: list[cp_model.IntVar] = []
 
     for t in horizon:
         made = model.NewIntVar(0, rules.squad_size, f"transfers_{t}")
@@ -263,10 +252,7 @@ def plan_transfers(
         objective.append(-transfer_rules.hit_cost_points * POINTS_SCALE * hits)
         objective.append(-TRANSFER_TIEBREAK * made)
 
-        if t == 0:
-            first_hits = hits
-
-    assert first_hits is not None  # the horizon is non-empty, checked above
+        hits_by_week.append(hits)
 
     model.Maximize(sum(objective))
 
@@ -281,8 +267,18 @@ def plan_transfers(
             f"Suspect the selling-price or bank arithmetic."
         )
 
-    # Read back only the first gameweek — the rest of the plan is thrown away and re-solved
-    # next week with better information. That is the point of a rolling horizon.
+    # Only the first gameweek is executed — the rest of the plan is re-solved next week with
+    # better information. That is the point of a rolling horizon. The later weeks are still
+    # read back, as the record of why this week's moves were made.
+    plan = tuple(
+        PlannedGameweek(
+            gameweek=views[t].gameweek,
+            transfers_in=tuple(p for p in pool if solver.Value(bought[(p.id, t)])),
+            transfers_out=tuple(p for p in pool if solver.Value(sold[(p.id, t)])),
+            hits=solver.Value(hits_by_week[t]),
+        )
+        for t in horizon
+    )
     first = SquadVars(
         in_squad={p.id: squad[(p.id, 0)] for p in pool},
         in_xi={p.id: xi[(p.id, 0)] for p in pool},
@@ -301,7 +297,8 @@ def plan_transfers(
         transfers_out=tuple(
             sorted((by_id[i] for i in current_squad_ids - selected), key=lambda p: p.id)
         ),
-        hits=solver.Value(first_hits),
+        hits=plan[0].hits,
         bank_tenths=funds - spent,
         horizon_value=solver.ObjectiveValue() / POINTS_SCALE,
+        plan=plan,
     )
