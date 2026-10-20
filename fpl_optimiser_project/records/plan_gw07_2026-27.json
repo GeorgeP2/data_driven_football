@@ -1,0 +1,67 @@
+{
+ "season": "2026-27",
+ "planned_at_gameweek": 7,
+ "source": "cli_advise --log-forecast",
+ "weeks": [
+  {
+   "gameweek": 7,
+   "transfers": [
+    {
+     "out": "Gibbs-White",
+     "out_id": 480,
+     "in": "Cherki",
+     "in_id": 399
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 8,
+   "transfers": [
+    {
+     "out": "Dubravka",
+     "out_id": 497,
+     "in": "Lammens",
+     "in_id": 412
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 9,
+   "transfers": [
+    {
+     "out": "Virgil",
+     "out_id": 356,
+     "in": "Silva",
+     "in_id": 566
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 10,
+   "transfers": [
+    {
+     "out": "Walle Egeli",
+     "out_id": 321,
+     "in": "Barry",
+     "in_id": 249
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 11,
+   "transfers": [
+    {
+     "out": "B.Fernandes",
+     "out_id": 426,
+     "in": "Semenyo",
+     "in_id": 397
+    }
+   ],
+   "hits": 0
+  }
+ ]
+}

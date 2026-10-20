@@ -3,7 +3,7 @@ VENV   ?= .venv
 BIN    := $(VENV)/bin
 
 .DEFAULT_GOAL := help
-.PHONY: help setup lint format typecheck test check new-project notebook clean
+.PHONY: help setup lint format typecheck test check new-project notebook sync restore clean
 
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -36,6 +36,12 @@ new-project: ## Scaffold a project: make new-project name="Expected Goals Model"
 
 notebook: ## Launch JupyterLab
 	$(BIN)/jupyter lab
+
+sync: ## Archive outputs that cannot be regenerated to personal S3 (needs .env)
+	scripts/s3_archive.sh sync
+
+restore: ## Pull the S3 archive back down (needs .env)
+	scripts/s3_archive.sh restore
 
 clean: ## Remove caches and build artefacts
 	find . -type d \( -name __pycache__ -o -name .pytest_cache -o -name .ruff_cache -o -name .mypy_cache \) -prune -exec rm -rf {} +

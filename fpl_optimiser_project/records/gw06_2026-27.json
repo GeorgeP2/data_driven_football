@@ -1,0 +1,175 @@
+{
+  "season": "2026-27",
+  "gameweek": 6,
+  "entry_id": 552800,
+  "deadline_utc": "2026-10-10T10:00:00Z",
+  "recorded_utc": "2026-10-12",
+  "provenance": {
+    "command": "python -m fpl_optimiser.cli_advise --team-id 552800",
+    "horizon": 5,
+    "free_transfers_derived": 1,
+    "history_cache": "~/.cache/fpl_optimiser/live/element_summaries_2026-27_through_gw05.json",
+    "note": "Run 2026-10-10 ~09:43Z, 17 min before the deadline, from cache (not --refresh). Run WITHOUT --log-forecast, so there is no pool_gw06 file; it cannot be regenerated cleanly because bootstrap-static now reflects GW6. xP values transcribed from the advisor's printed output. Written up retrospectively on 2026-10-12."
+  },
+  "status": "CONFIRMED_BY_API",
+  "status_note": "Manager said 'done' before the deadline; entry/552800/event/6/picks/ read 2026-10-12 matches this XI, captain, vice and bench order exactly, with 1 transfer for 0 cost.",
+  "recommendation": {
+    "transfers": [
+      {
+        "out": "Elanga",
+        "out_id": 454,
+        "in": "Groß",
+        "in_id": 124,
+        "cost": 0
+      }
+    ],
+    "hit_taken": 0,
+    "captain": "Saka",
+    "vice": "B.Fernandes",
+    "chip": null,
+    "departed_from_advisor": null,
+    "deferred": "Walle Egeli->Kostoulas, proposed by the 2026-09-21 run for -4, deferred to GW7 as a free transfer. The GW6 run itself proposed only the one transfer."
+  },
+  "xi": [
+    {
+      "pos": "GK",
+      "name": "Raya",
+      "id": 1,
+      "team": "ARS",
+      "opp": "LEE(H)",
+      "xp": 4.0
+    },
+    {
+      "pos": "DEF",
+      "name": "Gabriel",
+      "id": 4,
+      "team": "ARS",
+      "opp": "LEE(H)",
+      "xp": 4.12
+    },
+    {
+      "pos": "DEF",
+      "name": "De Cuyper",
+      "id": 115,
+      "team": "BHA",
+      "opp": "SUN(A)",
+      "xp": 3.72
+    },
+    {
+      "pos": "DEF",
+      "name": "Guéhi",
+      "id": 388,
+      "team": "MCI",
+      "opp": "LIV(A)",
+      "xp": 3.31
+    },
+    {
+      "pos": "DEF",
+      "name": "Ajayi",
+      "id": 279,
+      "team": "HUL",
+      "opp": "EVE(H)",
+      "xp": 3.11
+    },
+    {
+      "pos": "MID",
+      "name": "Saka",
+      "id": 12,
+      "team": "ARS",
+      "opp": "LEE(H)",
+      "xp": 5.32,
+      "captain": true
+    },
+    {
+      "pos": "MID",
+      "name": "B.Fernandes",
+      "id": 426,
+      "team": "MUN",
+      "opp": "TOT(H)",
+      "xp": 5.16,
+      "vice": true
+    },
+    {
+      "pos": "MID",
+      "name": "Mbeumo",
+      "id": 427,
+      "team": "MUN",
+      "opp": "TOT(H)",
+      "xp": 5.07
+    },
+    {
+      "pos": "MID",
+      "name": "Groß",
+      "id": 124,
+      "team": "BHA",
+      "opp": "SUN(A)",
+      "xp": 4.53
+    },
+    {
+      "pos": "MID",
+      "name": "Gibbs-White",
+      "id": 480,
+      "team": "NFO",
+      "opp": "CRY(A)",
+      "xp": 3.78
+    },
+    {
+      "pos": "FWD",
+      "name": "Emersonn",
+      "id": 316,
+      "team": "IPS",
+      "opp": "FUL(H)",
+      "xp": 4.3
+    }
+  ],
+  "bench": [
+    {
+      "order": 1,
+      "pos": "GK",
+      "name": "Dubravka",
+      "id": 497,
+      "team": "TOT",
+      "xp": 0.0
+    },
+    {
+      "order": 2,
+      "pos": "FWD",
+      "name": "Calvert-Lewin",
+      "id": 346,
+      "team": "LEE",
+      "xp": 2.99
+    },
+    {
+      "order": 3,
+      "pos": "DEF",
+      "name": "Virgil",
+      "id": 356,
+      "team": "LIV",
+      "xp": 2.69
+    },
+    {
+      "order": 4,
+      "pos": "FWD",
+      "name": "Walle Egeli",
+      "id": 321,
+      "team": "IPS",
+      "xp": 0.08
+    }
+  ],
+  "totals": {
+    "xi_raw": 46.42,
+    "captain_bonus": 5.32,
+    "xi_forecast_captain_doubled": 51.74,
+    "advisor_printed_forecast": 51.7,
+    "gw_average_prior_weeks": [
+      50,
+      81,
+      51,
+      69,
+      44
+    ]
+  },
+  "counterfactuals_for_scoring": {
+    "note": "Not recorded: the advisor was run once, for the recommendation only, so no alternative XI was solved."
+  }
+}

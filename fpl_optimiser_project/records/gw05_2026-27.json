@@ -1,0 +1,175 @@
+{
+  "season": "2026-27",
+  "gameweek": 5,
+  "entry_id": 552800,
+  "deadline_utc": "2026-09-18T17:30:00Z",
+  "recorded_utc": "2026-09-18",
+  "provenance": {
+    "command": "python -m fpl_optimiser.cli_advise --team-id 552800",
+    "horizon": 5,
+    "free_transfers_derived": 1,
+    "history_cache": "~/.cache/fpl_optimiser/live/element_summaries_2026-27_through_gw04.json",
+    "note": "Run from cache, not --refresh; cache verified to hold a GW4 row for all 659 players."
+  },
+  "status": "CONFIRMED_BY_USER",
+  "status_note": "Manager confirmed on 2026-09-18, before the 17:30Z deadline, that Furo->Emersonn was made. Picks are private pre-deadline, so this is the manager's word, not an API read. score.py still pulls entry/552800/event/5/picks/ post-deadline and will flag any difference.",
+  "recommendation": {
+    "transfers": [
+      {
+        "out": "Furo",
+        "out_id": 107,
+        "in": "Emersonn",
+        "in_id": 316,
+        "cost": 0
+      }
+    ],
+    "hit_taken": 0,
+    "captain": "B.Fernandes",
+    "vice": "Saka",
+    "chip": null,
+    "departed_from_advisor": "Advisor wanted a second transfer Elanga->Gross for -4; rejected. See project-fpl-team-and-advisor memory."
+  },
+  "xi": [
+    {
+      "pos": "GK",
+      "name": "Raya",
+      "id": 1,
+      "team": "ARS",
+      "opp": "BHA(A)",
+      "xp": 3.45
+    },
+    {
+      "pos": "DEF",
+      "name": "Guehi",
+      "id": 388,
+      "team": "MCI",
+      "opp": "SUN(H)",
+      "xp": 4.73
+    },
+    {
+      "pos": "DEF",
+      "name": "Gabriel",
+      "id": 4,
+      "team": "ARS",
+      "opp": "BHA(A)",
+      "xp": 3.54
+    },
+    {
+      "pos": "DEF",
+      "name": "Ajayi",
+      "id": 279,
+      "team": "HUL",
+      "opp": "NEW(A)",
+      "xp": 3.11
+    },
+    {
+      "pos": "DEF",
+      "name": "De Cuyper",
+      "id": 115,
+      "team": "BHA",
+      "opp": "ARS(H)",
+      "xp": 2.91
+    },
+    {
+      "pos": "MID",
+      "name": "B.Fernandes",
+      "id": 426,
+      "team": "MUN",
+      "opp": "FUL(A)",
+      "xp": 5.0,
+      "captain": true
+    },
+    {
+      "pos": "MID",
+      "name": "Saka",
+      "id": 12,
+      "team": "ARS",
+      "opp": "BHA(A)",
+      "xp": 4.97,
+      "vice": true
+    },
+    {
+      "pos": "MID",
+      "name": "Mbeumo",
+      "id": 427,
+      "team": "MUN",
+      "opp": "FUL(A)",
+      "xp": 4.86
+    },
+    {
+      "pos": "MID",
+      "name": "Gibbs-White",
+      "id": 480,
+      "team": "NFO",
+      "opp": "COV(H)",
+      "xp": 4.2
+    },
+    {
+      "pos": "FWD",
+      "name": "Calvert-Lewin",
+      "id": 346,
+      "team": "LEE",
+      "opp": "CRY(H)",
+      "xp": 4.84
+    },
+    {
+      "pos": "FWD",
+      "name": "Emersonn",
+      "id": 316,
+      "team": "IPS",
+      "opp": "EVE(A)",
+      "xp": 3.91
+    }
+  ],
+  "bench": [
+    {
+      "order": 1,
+      "pos": "GK",
+      "name": "Dubravka",
+      "id": 497,
+      "team": "TOT",
+      "xp": 0.0
+    },
+    {
+      "order": 2,
+      "pos": "DEF",
+      "name": "Virgil",
+      "id": 356,
+      "team": "LIV",
+      "xp": 2.61
+    },
+    {
+      "order": 3,
+      "pos": "FWD",
+      "name": "Walle Egeli",
+      "id": 321,
+      "team": "IPS",
+      "xp": 0.13
+    },
+    {
+      "order": 4,
+      "pos": "MID",
+      "name": "Elanga",
+      "id": 454,
+      "team": "NEW",
+      "xp": 0.0,
+      "flag": "injured"
+    }
+  ],
+  "totals": {
+    "xi_raw": 45.52,
+    "captain_bonus": 5.0,
+    "xi_forecast_captain_doubled": 50.52,
+    "gw_average_prior_weeks": [
+      50,
+      81,
+      51,
+      69
+    ]
+  },
+  "counterfactuals_for_scoring": {
+    "no_transfer_best_xi": 46.74,
+    "elanga_to_gross_instead": 50.02,
+    "advisor_two_transfers_after_minus_4": 47.02
+  }
+}

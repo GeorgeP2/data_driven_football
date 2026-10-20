@@ -14,9 +14,18 @@ depth**, ~3,300 predictions per run. Logging the whole pool rather than the chos
 point: 11 rows a week would take most of a season to say anything, and the XI is a biased
 sample (it is exactly the players the model rates highest).
 
-Optionally also hand-write `gw<NN>_<season>.json` — the *decision* record (XI, captain,
+It also writes `records/plan_gw<NN>_<season>.json` — the planned transfers for every week of
+the horizon. Only the first week is executed, but a move made as the first step of a chain
+(selling cheap now to fund a bigger buy later) needs the rest of the plan to explain it. And it
+saves the `bootstrap-static` the run saw to `outputs/snapshots/`, because FPL overwrites injury
+flags in place and this is the only way a history of them comes to exist.
+
+Optionally also hand-write `records/gw<NN>_<season>.json` — the *decision* record (XI, captain,
 transfers, counterfactuals). That scores the advice, not the forecast, and is the file
 `score.py` reads.
+
+Then, from the repo root, `make sync` to archive the pool log and snapshot to S3, and commit
+`records/`. Pool logs and snapshots cannot be regenerated once the deadline passes.
 
 ## Any time after a gameweek finishes
 
@@ -84,8 +93,10 @@ real 27 exactly.
 
 | File | What it is |
 |---|---|
-| `pool_gw<NN>_<season>.json` | Forecast for every player, every horizon week. Generated. |
-| `gw<NN>_<season>.json` | The decision: XI, captain, transfers, counterfactuals. Hand-written. |
+| `outputs/forecast_log/pool_gw<NN>_<season>.json` | Forecast for every player, every horizon week. Generated; archived to S3. |
+| `outputs/snapshots/bootstrap_gw<NN>_<season>_<utc>.json.gz` | The API payload the run planned from. Generated; archived to S3. |
+| `records/gw<NN>_<season>.json` | The decision: XI, captain, transfers, counterfactuals. Hand-written; committed. |
+| `records/plan_gw<NN>_<season>.json` | The planned transfers for every week of the horizon. Only week one is executed; the rest record why. Generated; committed. |
 | `calibrate.py` | Scores every pool log against actuals. |
 | `score.py` | Scores one week's decision, and flags if the fielded XI differed. |
 
