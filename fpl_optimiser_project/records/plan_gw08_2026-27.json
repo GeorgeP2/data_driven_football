@@ -1,0 +1,67 @@
+{
+ "season": "2026-27",
+ "planned_at_gameweek": 8,
+ "source": "cli_advise --log-forecast",
+ "weeks": [
+  {
+   "gameweek": 8,
+   "transfers": [
+    {
+     "out": "Cherki",
+     "out_id": 399,
+     "in": "Tavernier",
+     "in_id": 68
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 9,
+   "transfers": [
+    {
+     "out": "Walle Egeli",
+     "out_id": 321,
+     "in": "Evanilson",
+     "in_id": 79
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 10,
+   "transfers": [
+    {
+     "out": "Dubravka",
+     "out_id": 497,
+     "in": "Trafford",
+     "in_id": 385
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 11,
+   "transfers": [
+    {
+     "out": "Calvert-Lewin",
+     "out_id": 346,
+     "in": "Kostoulas",
+     "in_id": 138
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 12,
+   "transfers": [
+    {
+     "out": "Ajayi",
+     "out_id": 279,
+     "in": "Bogle",
+     "in_id": 330
+    }
+   ],
+   "hits": 0
+  }
+ ]
+}
