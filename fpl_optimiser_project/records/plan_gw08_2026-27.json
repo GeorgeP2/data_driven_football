@@ -7,20 +7,32 @@
    "gameweek": 8,
    "transfers": [
     {
-     "out": "Cherki",
-     "out_id": 399,
+     "out": "B.Fernandes",
+     "out_id": 426,
      "in": "Tavernier",
      "in_id": 68
+    },
+    {
+     "out": "Saka",
+     "out_id": 12,
+     "in": "Rudoni",
+     "in_id": 183
+    },
+    {
+     "out": "Walle Egeli",
+     "out_id": 321,
+     "in": "Haaland",
+     "in_id": 411
     }
    ],
-   "hits": 0
+   "hits": 2
   },
   {
    "gameweek": 9,
    "transfers": [
     {
-     "out": "Walle Egeli",
-     "out_id": 321,
+     "out": "Calvert-Lewin",
+     "out_id": 346,
      "in": "Evanilson",
      "in_id": 79
     }
@@ -29,6 +41,18 @@
   },
   {
    "gameweek": 10,
+   "transfers": [
+    {
+     "out": "Cherki",
+     "out_id": 399,
+     "in": "Ødegaard",
+     "in_id": 15
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 11,
    "transfers": [
     {
      "out": "Dubravka",
@@ -40,25 +64,13 @@
    "hits": 0
   },
   {
-   "gameweek": 11,
-   "transfers": [
-    {
-     "out": "Calvert-Lewin",
-     "out_id": 346,
-     "in": "Kostoulas",
-     "in_id": 138
-    }
-   ],
-   "hits": 0
-  },
-  {
    "gameweek": 12,
    "transfers": [
     {
-     "out": "Ajayi",
-     "out_id": 279,
-     "in": "Bogle",
-     "in_id": 330
+     "out": "Guéhi",
+     "out_id": 388,
+     "in": "Vuskovic",
+     "in_id": 504
     }
    ],
    "hits": 0
