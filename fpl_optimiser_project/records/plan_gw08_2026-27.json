@@ -1,0 +1,79 @@
+{
+ "season": "2026-27",
+ "planned_at_gameweek": 8,
+ "source": "cli_advise --log-forecast",
+ "weeks": [
+  {
+   "gameweek": 8,
+   "transfers": [
+    {
+     "out": "B.Fernandes",
+     "out_id": 426,
+     "in": "Tavernier",
+     "in_id": 68
+    },
+    {
+     "out": "Saka",
+     "out_id": 12,
+     "in": "Rudoni",
+     "in_id": 183
+    },
+    {
+     "out": "Walle Egeli",
+     "out_id": 321,
+     "in": "Haaland",
+     "in_id": 411
+    }
+   ],
+   "hits": 2
+  },
+  {
+   "gameweek": 9,
+   "transfers": [
+    {
+     "out": "Calvert-Lewin",
+     "out_id": 346,
+     "in": "Evanilson",
+     "in_id": 79
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 10,
+   "transfers": [
+    {
+     "out": "Cherki",
+     "out_id": 399,
+     "in": "Ødegaard",
+     "in_id": 15
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 11,
+   "transfers": [
+    {
+     "out": "Dubravka",
+     "out_id": 497,
+     "in": "Trafford",
+     "in_id": 385
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 12,
+   "transfers": [
+    {
+     "out": "Guéhi",
+     "out_id": 388,
+     "in": "Vuskovic",
+     "in_id": 504
+    }
+   ],
+   "hits": 0
+  }
+ ]
+}
