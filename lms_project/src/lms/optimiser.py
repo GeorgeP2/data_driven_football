@@ -205,6 +205,7 @@ class Pool:
     n_alive: int = None  # opponents + you currently alive (default: all)
     me_used: list = field(default_factory=list)
     opp_used: dict = field(default_factory=dict)  # name -> list of used teams (alive opps only)
+    opp_picks: dict = field(default_factory=dict)  # name -> team already picked this week
 
     def __post_init__(self):
         if self.pot is None:
@@ -256,6 +257,12 @@ def simulate_candidate(fp, gws, teams, P, plan, pool: Pool, n_sims=4000, draws=N
         for t in lst:
             if t in tix:
                 used[:, j, tix[t]] = True
+    # opponents whose pick for this week is already known (same order as opp_used)
+    fixed = [
+        (j, tix[pool.opp_picks[name]])
+        for j, name in enumerate(list(pool.opp_used)[:n_opp])
+        if pool.opp_picks.get(name) in tix
+    ]
 
     alive_opp = np.ones((n_sims, max(n_opp, 1)), dtype=bool)
     if n_opp == 0:
@@ -276,6 +283,9 @@ def simulate_candidate(fp, gws, teams, P, plan, pool: Pool, n_sims=4000, draws=N
         wts = np.where(wts_sum > 0, wts / np.where(wts_sum > 0, wts_sum, 1), 1.0 / T)
         cum = wts.cumsum(axis=2)
         pick = (opp_u[w] > cum).sum(axis=2).clip(max=T - 1)
+        if w == 0:
+            for j, t in fixed:
+                pick[:, j] = t
         sim_idx = np.arange(n_sims)[:, None]
         opp_win = team_win[sim_idx, w, pick]
         used[sim_idx, np.arange(used.shape[1])[None, :], pick] = True
@@ -447,6 +457,7 @@ if __name__ == "__main__":
 #   "skill_edge": 1.0,               // >1 if you believe you're better than average
 #   "opp_sharpness": 3.0,            // higher = opponents pick favourites more
 #   "me_used": ["Arsenal", "Man City"],
+#   "opp_picks": {"Opponent B": "Liverpool"},  // optional: opponents' known picks this week
 #   "opp_used": { "Dave": ["Liverpool"], "Sam": ["Chelsea", "Arsenal"] }   // alive opps, if known
 # }
 # Team names must match exactly across results.csv, fixtures.csv and config.json.
