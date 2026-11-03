@@ -354,12 +354,23 @@ def expected_points(
     ratings = view.team_ratings
     team_id = view.teams[player.id]
 
-    goals_per_90 = _shrunk_rate(
-        sum(stats.expected_goals), nineties, priors.expected_goals[element_type]
+    # Last season is this player's own prior, where he has one. Shrinking everyone toward the
+    # positional mean treated a 0.9-xG-a-game striker as a 0.3 one until he had re-proved it, and
+    # that took most of a season: measured on 2025-26, players who had run at 0.5+ xG/90 the year
+    # before were forecast 0.33-0.43 xG a match against 0.42-0.60 realised, in every stage of the
+    # season. Last season's rate alone out-ranked the shrunk current-season rate on this match's
+    # xG until GW10 (0.42 vs 0.30 over GW2-5); as the prior it is better or equal in every stage.
+    previous_nineties = stats.previous_season_minutes / 90
+    goals_prior = _shrunk_rate(
+        stats.previous_season_expected_goals, previous_nineties, priors.expected_goals[element_type]
     )
-    assists_per_90 = _shrunk_rate(
-        sum(stats.expected_assists), nineties, priors.expected_assists[element_type]
+    assists_prior = _shrunk_rate(
+        stats.previous_season_expected_assists,
+        previous_nineties,
+        priors.expected_assists[element_type],
     )
+    goals_per_90 = _shrunk_rate(sum(stats.expected_goals), nineties, goals_prior)
+    assists_per_90 = _shrunk_rate(sum(stats.expected_assists), nineties, assists_prior)
     bps_per_90 = _shrunk_rate(float(sum(stats.bps)), nineties, priors.bps[element_type])
     saves_per_90 = _shrunk_rate(float(sum(stats.saves)), nineties, priors.saves[element_type])
     dc_per_90 = _shrunk_rate(

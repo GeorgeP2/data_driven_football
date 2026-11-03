@@ -167,6 +167,37 @@ re-plan intact: the GW9 move became Virgil → Konsa (Evanilson, the planned buy
 different player out. One data point, but it is the first measure of how much the far end of
 the horizon is worth.
 
+### Follow-up: the goals term shrinks toward the wrong thing
+
+Checked on 2025-26 and held out on 2024-25. On average the goals term is calibrated (expected
+goals against realised xG: MID 1.02, FWD 1.04). The problem is at the top. Every per-90 rate
+is shrunk toward the *positional* mean with a six-match prior, so a striker who ran at
+0.9 xG/90 last season is treated as a 0.3 one until he has re-proved it, and the pull never
+fully lets go. Players with a 0.5+ xG/90 record the year before, playing 60+ minutes:
+
+| | GW2-5 | GW6-10 | GW11-19 | GW20-38 |
+|---|---|---|---|---|
+| realised xG per match | 0.46 | 0.45 | 0.60 | 0.42 |
+| model, positional prior | 0.33 | 0.41 | 0.43 | 0.33 |
+| model, last season as prior | 0.46 | 0.53 | 0.49 | 0.36 |
+
+Last season's rate on its own out-ranked the shrunk current-season rate on this match's xG
+until GW10 (0.42 against 0.30 over GW2-5), and as the prior it is better or equal in every
+stage. So that is the change: the player's own last season, shrunk toward the positional
+mean by how much of it he played, is the prior that the current season then shrinks toward.
+A player with no history keeps the positional prior; the same applies to assists.
+
+Rebuilt GW9: Haaland 7.22 → 7.86 xP (FPL's number was 9.0). The remaining gap is the minutes
+model, not the goals term — a 0.88 ceiling on the chance of starting and 72 expected minutes
+take a fifth off every component for a player who has played 90 minutes in eight of eight.
+
+Whole-model rank correlation does not move (0.740 → 0.739 and 0.720 → 0.720), because it is
+dominated by who plays. Among midfielders and forwards who did play it moves +0.006 in both
+early-season windows, which is the direction but not proof. One thing the same scoring made
+plain: on 2024-25, where the archive carries FPL's `ep_next` for every row, FPL's top-ranked
+player each week scored 9.75 on average against the model's 6.6 to 7.1, in both halves of the
+season. For the captain pick, FPL's number is the better one, by some distance.
+
 ## Files
 
 | File | What it is |

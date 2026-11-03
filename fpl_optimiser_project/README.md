@@ -259,6 +259,13 @@ yardstick.
   under-predicts, because a player averaging 20 BPS sometimes has a 40-BPS game. The curve that
   matters is lagged-rate-to-outcome, and it is far flatter.
 
+- **The per-90 rates shrank toward the wrong prior.** Every rate was pulled toward the
+  positional mean with a six-match prior, so a 0.9-xG striker was a 0.3 one until he had
+  re-proved it, and the pull never fully let go: elite scorers were forecast 0.33-0.43 xG a
+  match against 0.42-0.60 realised in every stage of 2025-26. Last season's own rate ranks
+  this match's xG better than the shrunk current rate until GW10, and as the prior it is
+  better or equal all season. Found live, through a captain pick.
+
 ## Suspensions: the one thing that is not a forecast
 
 A banned player has a zero percent chance of playing. That is arithmetic, and it is the only

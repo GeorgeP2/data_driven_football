@@ -58,6 +58,10 @@ class LaggedStats:
     defensive_contribution: tuple[int, ...]
     previous_season_points: int
     previous_season_minutes: int
+    previous_season_expected_goals: float = 0.0
+    previous_season_expected_assists: float = 0.0
+    """Last season's totals, where the player has one. Zero with zero minutes means no history,
+    not a player who never threatened — the model must read the minutes before the rates."""
 
     @property
     def nineties(self) -> float:
@@ -176,12 +180,20 @@ class SeasonHistory:
 
         self._previous_points: dict[int, int] = {}
         self._previous_minutes: dict[int, int] = {}
+        self._previous_expected_goals: dict[int, float] = {}
+        self._previous_expected_assists: dict[int, float] = {}
         for record in previous_season:
             self._previous_points[record.player_id] = (
                 self._previous_points.get(record.player_id, 0) + record.total_points
             )
             self._previous_minutes[record.player_id] = (
                 self._previous_minutes.get(record.player_id, 0) + record.minutes
+            )
+            self._previous_expected_goals[record.player_id] = (
+                self._previous_expected_goals.get(record.player_id, 0.0) + record.expected_goals
+            )
+            self._previous_expected_assists[record.player_id] = (
+                self._previous_expected_assists.get(record.player_id, 0.0) + record.expected_assists
             )
 
         self._calendar = calendar
@@ -272,6 +284,10 @@ class SeasonHistory:
                 defensive_contribution=tuple(r.defensive_contribution for r in history),
                 previous_season_points=self._previous_points.get(player_id, 0),
                 previous_season_minutes=self._previous_minutes.get(player_id, 0),
+                previous_season_expected_goals=self._previous_expected_goals.get(player_id, 0.0),
+                previous_season_expected_assists=self._previous_expected_assists.get(
+                    player_id, 0.0
+                ),
             )
             lagged[player_id] = stats
             # The schedule is pre-deadline information; the goals attached to it are not, and
