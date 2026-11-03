@@ -1,0 +1,67 @@
+{
+ "season": "2026-27",
+ "planned_at_gameweek": 9,
+ "source": "cli_advise --log-forecast",
+ "weeks": [
+  {
+   "gameweek": 9,
+   "transfers": [
+    {
+     "out": "Virgil",
+     "out_id": 356,
+     "in": "Konsa",
+     "in_id": 31
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 10,
+   "transfers": [
+    {
+     "out": "Calvert-Lewin",
+     "out_id": 346,
+     "in": "Evanilson",
+     "in_id": 79
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 11,
+   "transfers": [
+    {
+     "out": "Dubravka",
+     "out_id": 497,
+     "in": "Kinsky",
+     "in_id": 496
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 12,
+   "transfers": [
+    {
+     "out": "Ajayi",
+     "out_id": 279,
+     "in": "Vuskovic",
+     "in_id": 504
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 13,
+   "transfers": [
+    {
+     "out": "Vuskovic",
+     "out_id": 504,
+     "in": "Jacquet",
+     "in_id": 362
+    }
+   ],
+   "hits": 0
+  }
+ ]
+}
