@@ -93,7 +93,19 @@ your place in a football team is abrupt, and the model should treat it that way.
 
 MINUTES_WINDOW = 6
 STARTER_MINUTES = 82.0
-"""Minutes a player who starts tends to finish with, allowing for substitutions."""
+"""Minutes a player who starts tends to finish with, allowing for substitutions. The prior for
+a player's own recent minutes-when-starting, which is the better forecast: measured over 2025-26,
+the constant missed by 9.9 minutes a start, the player's own recent mean by 7.9. A nailed
+90-minute player was being given 72 expected minutes and a 0.88 chance of the hour; he got 83 and
+0.92."""
+
+STARTER_MINUTES_PRIOR_STARTS = 2.0
+"""How many starts of evidence it takes to outweigh the constant above."""
+
+SIXTY_GIVEN_START = 0.92
+"""Chance a starter is still on the pitch at the hour, before his own record says otherwise.
+The prior for the same per-player rate: players who average 86+ minutes when they start reach the
+hour 96% of the time, those who average under 70 reach it 84%."""
 
 CAMEO_MINUTES = 22.0
 
@@ -109,6 +121,13 @@ CEILING_START_PROBABILITY = 0.88
 one in eight — a knock in training, an illness, a suspension, a rested legs decision no lagged
 data can see. The uncalibrated model said 98% for these players and 86% of them started, and that
 over-confidence is exactly how a squad fills up with absentees."""
+
+NAILED_START_PROBABILITY = 0.93
+FULL_MATCH_MINUTES = 88
+"""The ceiling above is an average over everyone the raw model calls certain, and it lumps the
+rotated with the nailed. A player who has played the full ninety in each of his last six is a
+different bet: measured at the ceiling, he started 93.2% of the time on 2025-26 and 93.4% on
+2024-25, against 82-89% for anyone with even one early withdrawal in that run."""
 
 CONGESTION_REST_DAYS = 4.0
 CONGESTION_DISCOUNT = 0.94
@@ -147,12 +166,16 @@ class MinutesForecast:
     probability_starts: float
     probability_plays: float
     expected_minutes: float
+    sixty_given_start: float = 1.0
+    """Odds a start lasts to the hour. A player who is routinely withdrawn on 65 minutes and one
+    who plays every 90 both "start"; only one of them reliably collects the second appearance
+    point and the clean sheet."""
 
     @property
     def probability_sixty(self) -> float:
         """Odds of reaching 60 minutes — the threshold for the second appearance point and for
-        a defender's clean sheet to count. In practice this is close to starting."""
-        return self.probability_starts
+        a defender's clean sheet to count."""
+        return self.probability_starts * self.sixty_given_start
 
 
 def forecast_minutes(
@@ -194,10 +217,25 @@ def forecast_minutes(
     played = sum(w * (1.0 if m > 0 else 0.0) for w, m in zip(weights, recent_minutes, strict=False))
 
     probability_starts = _calibrate(started / total_weight)
+    if len(recent_minutes) >= MINUTES_WINDOW and all(
+        m >= FULL_MATCH_MINUTES for m in recent_minutes
+    ):
+        probability_starts = NAILED_START_PROBABILITY
     probability_plays = _clamp_unit(max(_calibrate(played / total_weight), probability_starts))
 
+    # What a start is worth is the player's own habit, shrunk toward the typical starter: a
+    # player who finishes his matches and one who is hooked on the hour are different bets.
+    start_minutes = [m for m, s in zip(recent_minutes, recent_starts, strict=False) if s > 0]
+    starter_minutes = (sum(start_minutes) + STARTER_MINUTES * STARTER_MINUTES_PRIOR_STARTS) / (
+        len(start_minutes) + STARTER_MINUTES_PRIOR_STARTS
+    )
+    sixty_given_start = (
+        sum(1 for m in start_minutes if m >= SIXTY_MINUTE_THRESHOLD)
+        + SIXTY_GIVEN_START * STARTER_MINUTES_PRIOR_STARTS
+    ) / (len(start_minutes) + STARTER_MINUTES_PRIOR_STARTS)
+
     expected_minutes = (
-        probability_starts * STARTER_MINUTES
+        probability_starts * starter_minutes
         + (probability_plays - probability_starts) * CAMEO_MINUTES
     )
     forecast = _apply_congestion(
@@ -205,13 +243,20 @@ def forecast_minutes(
             probability_starts=probability_starts,
             probability_plays=probability_plays,
             expected_minutes=expected_minutes,
+            sixty_given_start=sixty_given_start,
         ),
         days_rest,
+        starter_minutes=starter_minutes,
     )
     return _apply_injury(forecast, injury_availability)
 
 
-def _apply_congestion(forecast: MinutesForecast, days_rest: float | None) -> MinutesForecast:
+def _apply_congestion(
+    forecast: MinutesForecast,
+    days_rest: float | None,
+    *,
+    starter_minutes: float = STARTER_MINUTES,
+) -> MinutesForecast:
     """Discount a starter's odds after a midweek match. Substitutes are unaffected — if anything
     a congested week makes a cameo *more* likely, so only the starting probability moves.
     """
@@ -222,9 +267,10 @@ def _apply_congestion(forecast: MinutesForecast, days_rest: float | None) -> Min
         probability_starts=starts,
         probability_plays=max(forecast.probability_plays, starts),
         expected_minutes=(
-            starts * STARTER_MINUTES
+            starts * starter_minutes
             + (max(forecast.probability_plays, starts) - starts) * CAMEO_MINUTES
         ),
+        sixty_given_start=forecast.sixty_given_start,
     )
 
 
@@ -241,6 +287,7 @@ def _apply_injury(forecast: MinutesForecast, injury_availability: float | None) 
         probability_starts=forecast.probability_starts * scale,
         probability_plays=forecast.probability_plays * scale,
         expected_minutes=forecast.expected_minutes * scale,
+        sixty_given_start=forecast.sixty_given_start,
     )
 
 
