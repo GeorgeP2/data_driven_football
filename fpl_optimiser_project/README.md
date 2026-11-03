@@ -258,6 +258,12 @@ yardstick.
   take 3/2/1), so I applied that S-curve to each player's *average* BPS — which systematically
   under-predicts, because a player averaging 20 BPS sometimes has a 40-BPS game. The curve that
   matters is lagged-rate-to-outcome, and it is far flatter.
+- **And the flatter curve was still one curve for everyone.** The same mean BPS is spiky for a
+  forward (a goal is 24 BPS) and steady for a defender, so it earns the forward more bonus. One
+  curve had goalkeepers and defenders at 0.7 of forecast and forwards at 1.45 over 2025-26,
+  held out on 2024-25 too. Fitted per position: 1.01 / 0.99 / 0.92 / 1.32 on the held-out
+  season. It also ran to 2.7 bonus a match at a Haaland-sized rate, where the measured answer is
+  about 1 — so the fix lowers the very top as well as lifting mid-priced forwards.
 - **The defensive-contribution term discounted minutes twice.** It scaled the Poisson mean by
   expected minutes and then sat it under a convex threshold, so a nailed centre-back averaging
   12 actions was given a 51% chance of clearing 10. Over 2025-26 it forecast 4.6% of

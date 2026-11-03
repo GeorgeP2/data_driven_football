@@ -192,6 +192,28 @@ the ±1% jitter from `project-notes.md`, three seeds each gave 2157 / 2222 / 215
 noise is ±30 is not a result, and the one 2222 is the kind of draw the jitter exists to
 expose. The change stands on the component calibration, which is measured on ~12,000
 player-matches rather than one season total.
+### Follow-up: the bonus term, per position
+
+The GW9 component split had forwards who played 60+ minutes short 0.78 bonus a week, on
+eighteen rows. Checked on the 2025-26 archive it is real but not what it looked like. Scored
+as `P(60) * curve(rate)` against bonus actually awarded, the single curve ran
+
+| | GKP | DEF | MID | FWD |
+|---|---|---|---|---|
+| actual/forecast, 2025-26 | 0.69 | 0.72 | 0.84 | 1.45 |
+| actual/forecast, 2024-25 | 0.67 | 0.67 | 0.64 | 1.41 |
+
+Same split both seasons: the curve over-paid everyone except forwards. The reason is in what
+bonus is — a rank within the match — so the *spread* of a player's BPS matters as much as its
+mean, and a forward's is spikier. Fitting one curve per position on 2025-26 and checking on
+2024-25 untouched gives 1.01 / 0.99 / 0.92 / 1.32. Forwards are still short on the held-out
+season (their bonus runs higher some years), but the gap halved and nothing else moved.
+
+The surprise is the top end. At a 50-BPS rate — Haaland — the old curve paid 2.7 bonus a match;
+the measured rows scored about 1. So the fix *lowers* Haaland (7.22 → 6.23 xP in the rebuilt
+GW9) while lifting mid-priced forwards, and the whole-pool GW9 ratios barely move. The bonus
+term was not where the premium-forward gap lives; if it is anywhere it is in the goals term.
+Whole-model rank correlation is unchanged on both seasons; Pearson and MAE improve by a hair.
 ### Follow-up: the minutes model
 
 Three things measured on 2025-26 and checked on 2024-25, all on players with a single fixture.
