@@ -89,6 +89,84 @@ model and 0.38 for `ep_next` — the whole-pool number is mostly who-plays, as `
 warns. The decision record for the week is in `gw05_2026-27.json`; `score.py 5` reproduces the
 real 27 exactly.
 
+## Third reading (GW8 + GW9 2026-27, scored 2026-11-03)
+
+Scored with `calibrate.py` from the committed `pool_gw08` and `pool_gw09` logs; both weeks were
+`finished` and `data_checked`. The GW6 and GW7 logs are in S3, not on this machine, so they are
+not in the pooled numbers.
+
+| | GW4 | GW5 | GW8+GW9 |
+|---|---|---|---|
+| overall actual/xP | 1.22 | 1.26 | 1.19 (GW8 1.24, GW9 1.17) |
+| rank correlation, all depths | 0.7610 | 0.7556 | 0.7366 |
+| vs FPL `ep_next` (depth 0) | 0.8386 — ep_next ahead | 0.7466 — model ahead | 0.7500 vs 0.7247 — **model ahead, both weeks** |
+| DEF / GKP / FWD / MID actual/xP | 1.38 / 1.46 / 1.25 / 1.07 | 1.43 / 1.43 / 1.08 / 1.17 | 1.41 / 1.33 / 1.07 / 1.07 |
+| depth +1 (forecast a week early) | | | actual/xP 1.18, rank correlation 0.7116 |
+
+Four readings, and DEF has sat at 1.4 in all four, across high-scoring weeks (GW4) and low
+(GW5, GW8, GW9). Trap 1 no longer explains it. The head-to-head is now 3-1 to the model, and
+the week-early forecast loses only 0.04 of rank correlation, so the planner's trust in depth +1
+is roughly earned (depths +2 to +4 are still unscored).
+
+Restricted to players who got minutes (n=613) the whole-pool correlation again collapses, to
+0.32 for the model and 0.26 for `ep_next` — same shape as GW5.
+
+### Where the defender points go missing
+
+The GW9 forecast was rebuilt from the saved snapshot and the cached element summaries (it
+reproduces the logged pool to four decimal places) and split into its scoring components, for
+every defender who played 60+ minutes (n=80):
+
+| component | model | actual | gap |
+|---|---|---|---|
+| appearance | 1.45 | 2.00 | +0.55 |
+| clean sheet | 0.63 | 1.35 | +0.72 |
+| defensive contribution | 0.13 | 0.60 | +0.47 |
+| goals conceded | −0.49 | −0.34 | +0.15 |
+| bonus | 0.20 | 0.25 | +0.05 |
+| goals + assists | 0.36 | 0.22 | −0.14 |
+| cards (not modelled) | 0.00 | −0.29 | −0.29 |
+| **total** | **2.29** | **3.80** | **+1.51** |
+
+The appearance gap is conditioning, not bias: the table only contains players who did play,
+and the minutes model gave them 0.69 for the 60-minute point. Midfielders show the same +0.57.
+What is defender-specific is the next two rows.
+
+- **Defensive contribution is the clear one.** The per-90 rate is shrunk toward the positional
+  mean (7.8), multiplied by the expected-minutes share (~0.75), then put through Poisson
+  P(≥10). A mean of ~5.9 gives 8%; 30% of these defenders actually cleared the bar. Two things
+  compound: the threshold is convex, so the minutes discount hits it twice (once on the share,
+  again through the tail), and shrinking toward one DEF mean erases the centre-back /
+  full-back split, which is most of the signal. Worth ~0.5 xP per starting defender per week.
+- **Clean sheets are short but not yet separable from the week.** The model implied 0.22 per
+  match (exp(−1.51) on the fixture ratings) against 0.34 realised; GW8 and GW9 averaged 45 and
+  47, so some of that is two quiet weekends. Needs more weeks.
+- **Yellow cards are not modelled** and cost defenders 0.29 and midfielders 0.19 per
+  player-week. Small, steady, and in the other direction: it offsets, it does not explain.
+
+What this means for the planner: the ordering *within* defenders is fine (rank correlation is
+what it consumes), but a transfer compares a defender against a midfielder, and defenders are
+systematically ~0.4 xP a week cheap in that comparison.
+
+### The decisions
+
+**GW9.** Virgil → Konsa (2.78 → 3.69 xP): 1 point against 10. Captain Haaland, 7.22 xP and
+top of the pool on both the model and `ep_next`: 2 points. The fielded XI was exactly the
+model's best XI from the 15 (3-5-2), so the score is like-for-like: forecast 54.9, actual 45
+against a 47 average. Guéhi was fielded on 0.92 availability and did not play (dropped after
+45 minutes the week before; the minutes model cannot see that), the auto-sub brought in Ajayi
+for 2 with De Cuyper's 9 last on the bench. Best XI from the 15 in hindsight: 62.
+
+**GW8.** The plan's three transfers were made as written (Saka → Tavernier, B.Fernandes →
+Rudoni, Walle Egeli → Haaland, −8): the three players sold scored 0 between them, the three
+bought 20, so the hit returned +12 net. Fielded XI 58 gross against a 53.4 forecast.
+
+**Plan churn.** Of the four forward moves in `plan_gw08` (GW9–12), none survived the GW9
+re-plan intact: the GW9 move became Virgil → Konsa (Evanilson, the planned buy, scored 9; Konsa
+10), and the later weeks were all re-written. Vuskovic appears in both plans but for a
+different player out. One data point, but it is the first measure of how much the far end of
+the horizon is worth.
+
 ## Files
 
 | File | What it is |
