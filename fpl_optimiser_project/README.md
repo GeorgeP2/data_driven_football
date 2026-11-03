@@ -264,6 +264,13 @@ yardstick.
   held out on 2024-25 too. Fitted per position: 1.01 / 0.99 / 0.92 / 1.32 on the held-out
   season. It also ran to 2.7 bonus a match at a Haaland-sized rate, where the measured answer is
   about 1 — so the fix lowers the very top as well as lifting mid-priced forwards.
+- **The defensive-contribution term discounted minutes twice.** It scaled the Poisson mean by
+  expected minutes and then sat it under a convex threshold, so a nailed centre-back averaging
+  12 actions was given a 51% chance of clearing 10. Over 2025-26 it forecast 4.6% of
+  defender-matches clearing the bar; 14.6% did. Applying the minutes discount once, as the
+  chance of playing an hour, lands at 13.2% with a better Brier score and rank correlation.
+  Found live, not in the backtest: four weeks of `docs/forecast-log.md` had defenders at 1.4x
+  forecast before the component split pointed at it.
 
 - **A start was worth a constant 82 minutes, and the hour was assumed.** The player's own
   recent minutes-when-starting misses by 7.9 minutes a start against the constant's 9.9, and
