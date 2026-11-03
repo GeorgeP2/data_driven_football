@@ -167,6 +167,32 @@ re-plan intact: the GW9 move became Virgil → Konsa (Evanilson, the planned buy
 different player out. One data point, but it is the first measure of how much the far end of
 the horizon is worth.
 
+### Follow-up: the defensive-contribution term
+
+Checked on the full 2025-26 archive (the one complete season with the rule) rather than on
+two live weeks. Scored as "did this player clear the bar this match", the old term predicted
+4.6% of defender-matches against 14.6% realised, and 2.0% of midfielder-matches against 8.2%
+— a factor of three, all season, not a quiet-weekend artefact. The cause was the minutes
+discount applied twice: once by scaling the Poisson mean by expected minutes, again through
+the convex tail. Applying it once, as the chance of playing an hour, gives 13.2% and 7.4%,
+with the best Brier score and rank correlation of the forms tried (a shrunk per-match hit
+rate was no better, so the simpler change stayed).
+
+Rebuilding the GW9 forecast with the new term moves the whole-pool actual/xP from 1.37 to
+1.24 for DEF, 1.05 to 0.99 for MID and 1.17 to 1.10 overall. The remaining defender gap is
+the clean-sheet term, still open. On the 2025-26 evaluation the whole-model rank correlation
+is unchanged (0.740 to 0.739): the term is small per player and moves the same players, so
+this is a calibration fix for the planner's defender-versus-midfielder comparison, not a
+ranking improvement.
+
+The season backtest cannot see it either way. One-shot 2025-26 runs (one-week transfers, as
+`cli_backtest` runs them) gave 2149 before and 2087 after; with the five-week planner and
+the ±1% jitter from `project-notes.md`, three seeds each gave 2157 / 2222 / 2155 before
+(mean 2178) and 2139 / 2142 / 2159 after (mean 2147). A 31-point gap on means whose own
+noise is ±30 is not a result, and the one 2222 is the kind of draw the jitter exists to
+expose. The change stands on the component calibration, which is measured on ~12,000
+player-matches rather than one season total.
+
 ## Files
 
 | File | What it is |

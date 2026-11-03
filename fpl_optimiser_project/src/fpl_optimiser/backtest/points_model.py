@@ -401,8 +401,16 @@ def expected_points(
         if threshold is not None:
             # The defensive-contribution point is a threshold, not a rate: you get 2 points for
             # 10 actions and nothing for 9. Poisson gives the odds of clearing the bar.
-            expected_actions = dc_per_90 * share
-            points += _poisson_at_least(threshold, expected_actions) * DEFENSIVE_CONTRIBUTION_POINTS
+            #
+            # The minutes discount is applied once, as the chance of being on the pitch for most
+            # of the match — not by scaling the Poisson mean. Scaling the mean by expected
+            # minutes conflated "may not play" with "plays fewer minutes when he does", and the
+            # convex tail then punished it twice: over 2025-26 that version predicted 4.6% of
+            # defender-matches would clear the bar against 14.6% that did (midfielders 2.0%
+            # against 8.2%). Scored the same way, this form lands at 13.2% and 7.4%, with the
+            # better Brier score and rank correlation of the forms tried.
+            clears_bar = _poisson_at_least(threshold, dc_per_90) * minutes.probability_sixty
+            points += clears_bar * DEFENSIVE_CONTRIBUTION_POINTS
 
         # Bonus: the S-curve on expected BPS, and only if they are on the pitch long enough
         # to accumulate any.
