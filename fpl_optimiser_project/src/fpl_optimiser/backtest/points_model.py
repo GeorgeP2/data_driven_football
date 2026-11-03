@@ -53,9 +53,10 @@ a midfielder or forward. Keepers are not eligible."""
 
 DEFENSIVE_CONTRIBUTION_POINTS = 2
 
-BONUS_BASE = 0.12
-BONUS_BPS_SCALE = 16.0
-"""Bonus expected from a player's *lagged BPS rate*, as `BONUS_BASE * exp(bps_per_90 / SCALE)`.
+BONUS_BASE = {1: 0.17, 2: 0.10, 3: 0.14, 4: 0.34}
+BONUS_BPS_SCALE = {1: 60.0, 2: 20.0, 3: 24.0, 4: 38.0}
+"""Bonus expected from a player's *lagged BPS rate*, as `BASE * exp(bps_per_90 / SCALE)`, one
+curve per position.
 
 Bonus is really a rank within a fixture — the top three BPS scores take 3, 2 and 1 — and the
 within-match curve is a steep S: nothing below 20 BPS, 1.6 points at 30-34, 2.2 at 35-39.
@@ -65,9 +66,18 @@ it. The average is not the realisation: a player who averages 20 BPS sometimes h
 and takes the full 3 points, so mapping the mean through a convex curve systematically
 under-predicts. Jensen's inequality, quietly eating the bonus term.
 
-The curve fitted here is the one that actually matters — measured lagged-rate against the bonus
-subsequently scored (13 BPS/90 -> 0.25 bonus, 20 -> 0.47, 30 -> 0.68, 33 -> 0.99). It is much
-flatter than the within-match curve, and gently convex."""
+The curve that matters is lagged-rate-to-outcome, and it is much flatter — and it differs by
+position, for the same reason. A forward's BPS is spiky (a goal is 24 BPS on its own), a
+defender's is steady, so the same *average* rate means more bonus for the forward and less for
+the defender. One curve for everyone (0.12 * exp(x / 16)) had goalkeepers and defenders at 0.7
+of forecast and forwards at 1.45 across 2025-26, and the same split held out on 2024-25.
+
+Fitted by least squares on every player-match of 2025-26, `P(60) * curve` against bonus scored,
+and checked on 2024-25 untouched: actual/forecast went 0.67 -> 1.01 (GKP), 0.67 -> 0.99 (DEF),
+0.64 -> 0.92 (MID), 1.41 -> 1.32 (FWD). Forwards are still short on the held-out season — their
+bonus runs higher in some seasons than others — but the gap halved. The old curve also ran to
+2.7 at a 50-BPS rate, which is what a Haaland looks like; measured, those rows scored about 1,
+so the fix lowers the very top as well as lifting the middle."""
 
 MAX_BONUS = 3.0
 
@@ -406,18 +416,23 @@ def expected_points(
 
         # Bonus: the S-curve on expected BPS, and only if they are on the pitch long enough
         # to accumulate any.
-        points += minutes.probability_sixty * _expected_bonus(bps_per_90 * attack_multiplier)
+        points += minutes.probability_sixty * _expected_bonus(
+            bps_per_90 * attack_multiplier, element_type
+        )
 
         total += max(0.0, points)
 
     return total * suspension_discount
 
 
-def _expected_bonus(bps_per_90: float) -> float:
+def _expected_bonus(bps_per_90: float, element_type: int) -> float:
     """Bonus expected from a player's BPS rate, fitted on rate-to-outcome, not match-to-outcome."""
     if bps_per_90 <= 0:
         return 0.0
-    return min(MAX_BONUS, BONUS_BASE * math.exp(bps_per_90 / BONUS_BPS_SCALE))
+    return min(
+        MAX_BONUS,
+        BONUS_BASE[element_type] * math.exp(bps_per_90 / BONUS_BPS_SCALE[element_type]),
+    )
 
 
 def _poisson_at_least(threshold: int, mean: float) -> float:
