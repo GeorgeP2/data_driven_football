@@ -258,6 +258,13 @@ yardstick.
   take 3/2/1), so I applied that S-curve to each player's *average* BPS — which systematically
   under-predicts, because a player averaging 20 BPS sometimes has a 40-BPS game. The curve that
   matters is lagged-rate-to-outcome, and it is far flatter.
+- **The defensive-contribution term discounted minutes twice.** It scaled the Poisson mean by
+  expected minutes and then sat it under a convex threshold, so a nailed centre-back averaging
+  12 actions was given a 51% chance of clearing 10. Over 2025-26 it forecast 4.6% of
+  defender-matches clearing the bar; 14.6% did. Applying the minutes discount once, as the
+  chance of playing an hour, lands at 13.2% with a better Brier score and rank correlation.
+  Found live, not in the backtest: four weeks of `docs/forecast-log.md` had defenders at 1.4x
+  forecast before the component split pointed at it.
 
 - **A start was worth a constant 82 minutes, and the hour was assumed.** The player's own
   recent minutes-when-starting misses by 7.9 minutes a start against the constant's 9.9, and
