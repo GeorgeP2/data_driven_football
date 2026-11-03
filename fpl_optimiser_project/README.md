@@ -266,6 +266,14 @@ yardstick.
   Found live, not in the backtest: four weeks of `docs/forecast-log.md` had defenders at 1.4x
   forecast before the component split pointed at it.
 
+- **A start was worth a constant 82 minutes, and the hour was assumed.** The player's own
+  recent minutes-when-starting misses by 7.9 minutes a start against the constant's 9.9, and
+  the same record says whether a start lasts to 60 — 96% for players who average 86+, 84% for
+  those under 70 — which is what the second appearance point and a clean sheet are paid on.
+  And the 0.88 ceiling lumped the rotated with the nailed: six full ninetys running started
+  93% of the time, two seasons out of two. The first change here that moved the whole-model
+  rank correlation (+0.002 on both seasons, every position up, MAE down).
+
 ## Suspensions: the one thing that is not a forecast
 
 A banned player has a zero percent chance of playing. That is arithmetic, and it is the only

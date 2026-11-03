@@ -192,6 +192,43 @@ the ±1% jitter from `project-notes.md`, three seeds each gave 2157 / 2222 / 215
 noise is ±30 is not a result, and the one 2222 is the kind of draw the jitter exists to
 expose. The change stands on the component calibration, which is measured on ~12,000
 player-matches rather than one season total.
+### Follow-up: the minutes model
+
+Three things measured on 2025-26 and checked on 2024-25, all on players with a single fixture.
+
+1. **Minutes given a start.** The constant 82 missed by 9.9 minutes a start; the player's own
+   recent mean minutes-when-starting missed by 7.9. Players averaging 86+ when they start
+   actually play 86.5; those under 70 play 74.
+2. **The hour.** `P(60)` was taken as `P(start)`. Among starters, reaching 60 runs from 84%
+   (recent average under 70 minutes) to 96% (86+). A player hooked on the hour every week was
+   being paid the second appearance point and the clean sheet as if he finished.
+3. **The ceiling.** 0.88 was measured over everyone the raw model called certain, and it lumps
+   the rotated with the nailed. At the ceiling, by how many of the last six were full 90s:
+
+   | full 90s in last six | 0 | 1-4 | 5 | 6 |
+   |---|---|---|---|---|
+   | started, 2025-26 | 0.64 | 0.82-0.88 | 0.88 | **0.93** |
+   | started, 2024-25 | 0.75 | 0.83-0.86 | 0.89 | **0.93** |
+
+   Six out of six is a different bet and gets 0.93; anything less keeps 0.88.
+
+Each start's minutes and hour rate are now the player's own, shrunk toward 82 and 0.92 with a
+two-start prior. This is the first of the week's changes to move the whole-model evaluation:
+rank correlation 0.740 → 0.742 (2025-26) and 0.720 → 0.722 (2024-25), every position up, MAE
+down, and the gap to FPL's `ep_next` narrowed by 0.003 on both. Among midfielders and forwards
+who actually played, rank correlation is up in all four season-stage windows (+0.004 to
++0.011), and the model's top-15 by forecast scores more in all four. The ceiling step on its
+own adds nothing to those numbers — it is kept on the component evidence above.
+
+The season backtest agrees, for once. Five-week planner, ±1% jitter, three seeds on 2025-26:
+2235 / 2250 / 2231 (mean 2239) against 2157 / 2222 / 2155 (mean 2178) on main. +61 on the
+mean, every seed above every baseline seed, same transfer and hit counts. That is the first
+change this season to clear the 60-point line in the right direction — and it is the minutes
+model, which is where the README said the points were.
+
+Rebuilt GW9: Cherki (35 minutes, flagged) 4.48 → 3.60; Guéhi (dropped) 3.43 → 3.13; the
+full-90 Arsenal defenders up 0.3-0.4. Haaland 7.22 → 7.36 only — one sub-88-minute match in his
+last six keeps him on the ordinary ceiling, which is the rule working as measured.
 
 ## Files
 

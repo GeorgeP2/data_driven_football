@@ -14,6 +14,7 @@ from fpl_optimiser.backtest.history import Fixture
 from fpl_optimiser.backtest.points_model import (
     CEILING_START_PROBABILITY,
     FLOOR_START_PROBABILITY,
+    NAILED_START_PROBABILITY,
     forecast_minutes,
 )
 from fpl_optimiser.backtest.scoring import score_gameweek
@@ -28,9 +29,11 @@ class TestMinutesModel:
 
         # Not 1.0 — nobody is a certainty. Measured over 27,000 predictions, players the model
         # called nailed-on started 86% of the time; claiming 100% is how a squad fills up with
-        # absentees. The ceiling is calibration, not pessimism.
-        assert forecast.probability_starts == pytest.approx(CEILING_START_PROBABILITY)
-        assert forecast.expected_minutes > 70
+        # absentees. The ceiling is calibration, not pessimism. Six full ninetys running earns
+        # the higher of the two ceilings: those players started 93% of the time, two seasons out
+        # of two.
+        assert forecast.probability_starts == pytest.approx(NAILED_START_PROBABILITY)
+        assert forecast.expected_minutes > 80
 
     def test_nobody_is_a_certainty(self) -> None:
         """Regression: the uncalibrated model claimed 98%, and only 86% of them started.
@@ -43,8 +46,11 @@ class TestMinutesModel:
         nailed = forecast_minutes(lagged(1, minutes=(90,) * 6), 7)
         never = forecast_minutes(lagged(2, minutes=(0,) * 6), 7)
 
-        assert nailed.probability_starts <= CEILING_START_PROBABILITY
+        assert nailed.probability_starts <= NAILED_START_PROBABILITY < 1.0
         assert nailed.probability_starts > 0.8, "still clearly a starter"
+        # One early withdrawal in the run and he is back on the ordinary ceiling.
+        hooked_once = forecast_minutes(lagged(3, minutes=(90, 90, 65, 90, 90, 90)), 7)
+        assert hooked_once.probability_starts == pytest.approx(CEILING_START_PROBABILITY)
         assert never.probability_starts == FLOOR_START_PROBABILITY == 0.0
 
     def test_a_player_who_has_lost_his_place_is_not(self) -> None:
