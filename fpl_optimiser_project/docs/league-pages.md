@@ -20,7 +20,7 @@ PYTHONPATH=src python -m fpl_optimiser.leagues.build    # render outputs/league_
 ```
 
 Before `build.py`, add `commentary/<league>/gwNN.md` for the new week (plain paragraphs, `**bold**`
-only; `build.py` names any week without one). The Boys write-ups are cheeky, THG's neutral. Write
+only; `build.py` names any week without one). Both leagues get the same cheeky format: roast the week's lowest scorer and whoever is bottom, mild praise for the week's top scorer (unless it's the repo owner), and a call-out for anyone whose win chance moved 10+ percentage points either way. Write
 from the numbers in `outputs/league_pages/<league>.json` → `gameweeks`: the "transfers" net is points in minus points
 out for that week across all 15 players, so describe it as that, not as "beat his own squad".
 
