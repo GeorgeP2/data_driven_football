@@ -252,6 +252,54 @@ Rebuilt GW9: Cherki (35 minutes, flagged) 4.48 → 3.60; Guéhi (dropped) 3.43 �
 full-90 Arsenal defenders up 0.3-0.4. Haaland 7.22 → 7.36 only — one sub-88-minute match in his
 last six keeps him on the ordinary ceiling, which is the rule working as measured.
 
+## Fourth reading (GW10 2026-27, scored 2026-11-09)
+
+GW10 is the first week forecast by the model *after* the three fixes above (defensive
+contribution, per-position bonus, minutes). The GW8 and GW9 logs were made before them, so the
+pooled and by-depth numbers below mix two models. `calibrate.py` reads only
+`outputs/forecast_log/`; the pooled run copied the committed `records/pool_gw0{8,9}` logs in
+next to the GW10 one.
+
+| | GW8+GW9 | GW10 (new model) | GW8–10 pooled |
+|---|---|---|---|
+| overall actual/xP | 1.19 | 1.18 | 1.20 |
+| rank correlation, depth 0 | 0.7500 | **0.7797** | 0.7599 |
+| vs FPL `ep_next` (depth 0) | model ahead both weeks | 0.7797 vs 0.7510 — **model ahead** | 0.7599 vs 0.7328 |
+| DEF / GKP / FWD / MID actual/xP | 1.41 / 1.33 / 1.07 / 1.07 | **1.18** / 1.14 / 1.27 / 1.17 | 1.31 / 1.24 / 1.15 / 1.13 |
+
+- **DEF dropped from 1.4 to 1.18** in its first week under the new defensive-contribution term,
+  close to the 1.24 the rebuilt GW9 forecast predicted. It no longer stands out from MID. One
+  week, but it is the change the fix said would happen. The clean-sheet term is still open.
+- **Every position is still above 1.** GW10 averaged 55, an ordinary week, so trap 1 does not
+  explain it. The model under-forecasts across the board
+  by about a fifth. That does not hurt the planner, which ranks players and does not need
+  calibrated totals.
+- **Rank correlation 0.78 is the best week yet**, and the head-to-head is now 4-1 to the model.
+- **Depth +2 is scored for the first time** (GW10 from `pool_gw08`): rank correlation 0.656,
+  against 0.717 at +1 and 0.760 at +0. The fall gets steeper with depth. Both deeper numbers come
+  from the old model, so this is not yet a clean measure of how far ahead the planner can see.
+
+### The decisions
+
+**GW10.** Calvert-Lewin → Evanilson, free transfer: 2 points against 9 (Evanilson 84 minutes,
+a goal and 3 bonus). This move had been in the plan for three weeks running: `plan_gw08` had it
+for GW9, `plan_gw09` for GW10. Captain Gabriel, top of the pool at 5.35 xP (Haaland 5.14,
+Tavernier 5.18): 8 points, so 16. `ep_next` would have captained Evanilson (8.5) for 18. The
+fielded XI was exactly the model's best XI from the 15, so the score compares like with like:
+forecast 54.1, actual 65 against a 55 average.
+
+The misses were in attack. Haaland (5.14 xP) scored 2 for the second week running. Tavernier
+(5.18) and Mbeumo (5.12) scored 3 and 2. Emersonn (3.31) scored 1 in 53 minutes. On the bench,
+Cherki (2.06 xP on 0.44 availability) played 90 minutes and scored 9, and Ajayi scored 6, so 15
+points were left on the bench. Best XI from the 15 in hindsight: 79. Guéhi played 45 minutes,
+same as the week before GW9. The plan sells him in GW12.
+
+**Plan churn.** Calvert-Lewin → Evanilson is the first forward move to survive a re-plan, from
+GW9 in `plan_gw08` through to GW10. The other moves did not survive. `plan_gw08`'s
+Cherki → Ødegaard for GW10 became Cherki → Rogers for GW11. Both earlier plans had a goalkeeper
+move for GW11 (Trafford, then Kinsky), and the GW10 plan drops it. Vuskovic is gone from the
+plan altogether.
+
 ## Files
 
 | File | What it is |

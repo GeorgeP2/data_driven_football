@@ -1,0 +1,67 @@
+{
+ "season": "2026-27",
+ "planned_at_gameweek": 11,
+ "source": "cli_advise --log-forecast",
+ "weeks": [
+  {
+   "gameweek": 11,
+   "transfers": [
+    {
+     "out": "Guéhi",
+     "out_id": 388,
+     "in": "Silva",
+     "in_id": 566
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 12,
+   "transfers": [
+    {
+     "out": "Dubravka",
+     "out_id": 497,
+     "in": "Trafford",
+     "in_id": 385
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 13,
+   "transfers": [
+    {
+     "out": "Emersonn",
+     "out_id": 316,
+     "in": "Barry",
+     "in_id": 249
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 14,
+   "transfers": [
+    {
+     "out": "Cherki",
+     "out_id": 399,
+     "in": "Doku",
+     "in_id": 400
+    }
+   ],
+   "hits": 0
+  },
+  {
+   "gameweek": 15,
+   "transfers": [
+    {
+     "out": "Silva",
+     "out_id": 566,
+     "in": "Vuskovic",
+     "in_id": 504
+    }
+   ],
+   "hits": 0
+  }
+ ]
+}
