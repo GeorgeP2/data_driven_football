@@ -37,6 +37,7 @@ from fpl_optimiser.live import (
     load_live_history,
     load_previous_season,
     next_gameweek,
+    season_gameweeks,
     season_label,
 )
 from fpl_optimiser.model import DEFAULT_BENCH_WEIGHTS, BenchWeights, Squad
@@ -582,7 +583,9 @@ def main(argv: list[str] | None = None) -> int:
                 state.play(Chip(name), gameweek)
             chip_decision = choose_chip(
                 gameweek,
-                list(history.gameweeks),
+                # The whole season, not `history.gameweeks`: that stops at the planning
+                # horizon and would make every chip deadline look closer than it is.
+                season_gameweeks(payload),
                 state,
                 bench_expected_points=decision.squad.bench_expected_points,
                 captain_expected_points=decision.squad.expected_points[decision.squad.captain.id],
