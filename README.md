@@ -13,6 +13,7 @@ Each idea lives in its own top-level folder, is reproducible and tested, and fol
 |---------|------|--------|------------|
 | [Last Man Standing optimiser](lms_project) | Optimisation & simulation | 🚧 | Monte Carlo pot-equity picks return +0.73 to +0.98 per stake against an office-pool field, against −0.11 to −0.18 for always backing the favourite |
 | [FPL Optimiser](fpl_optimiser_project) | Optimisation & simulation | 🚧 | With a 5-week planner and chips, the full system scores 2,126 on a 2025-26 backtest against 1,957 for a points-per-game baseline (season noise band ±30) |
+| [Football Stats](football_stats_project) | Analytics & Visualisation | 🚧 | _TBC_ |
 <!-- projects:end -->
 
 ## Repository layout
@@ -40,7 +41,7 @@ Each idea lives in its own top-level folder, is reproducible and tested, and fol
 ```bash
 git clone git@github.com:GeorgeP2/data_driven_football.git
 cd data_driven_football
-make setup            # venv + core, dev and notebook deps + pre-commit hooks
+make setup            # venv + core, dev, notebook and ml deps + pre-commit hooks
 source .venv/bin/activate
 make check            # lint, type-check and test everything
 ```
