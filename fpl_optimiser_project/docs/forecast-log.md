@@ -300,6 +300,63 @@ Cherki → Ødegaard for GW10 became Cherki → Rogers for GW11. Both earlier pl
 move for GW11 (Trafford, then Kinsky), and the GW10 plan drops it. Vuskovic is gone from the
 plan altogether.
 
+## Fifth reading (GW11 2026-27, scored 2026-11-24)
+
+GW11 is the second week forecast by the new model, and the first where a deeper forecast
+(`pool_gw10`, depth +1) also comes from it. The pooled run again copied the committed
+`records/pool_gw0{8,9}` logs in next to the GW10 and GW11 ones.
+
+| | GW10 | GW11 | GW8–11 pooled |
+|---|---|---|---|
+| overall actual/xP (depth 0) | 1.18 | 1.21 | 1.20 |
+| rank correlation, depth 0 | 0.7797 | 0.7499 | 0.7574 |
+| vs FPL `ep_next` (depth 0) | 0.7797 vs 0.7510 | 0.7499 vs 0.7152 — **model ahead** | 0.7574 vs 0.7283 |
+| DEF / GKP / FWD / MID actual/xP | 1.18 / 1.14 / 1.27 / 1.17 | 1.13 / 1.26 / 1.30 / 1.24 | 1.25 / 1.26 / 1.18 / 1.19 |
+
+The pooled position ratios are over all depths; the single-week ones are depth 0.
+
+- **The head-to-head is now 5-1 to the model.**
+- **DEF held at 1.13**, a second week level with or below the other positions. The
+  defensive-contribution fix is doing what it said. The pooled DEF figure is still 1.25 because
+  it carries the old model's GW8 and GW9 logs.
+- **Every position is still above 1**, and GW11 averaged 35, a low week, so trap 1 cannot be the
+  reason. The across-the-board under-forecast of about a fifth is now four weeks old.
+- **Depth, GW11 only:** 0.750 at +0, 0.690 at +1, 0.657 at +2, 0.615 at +3. The +1 figure is
+  the first deeper reading from the new model. It is no better than the old model's 0.717 at +1
+  for GW10, though the two are different weeks. Depth +3 is scored for the first time, from the
+  old model.
+
+### The decisions
+
+**GW11.** Guéhi → Silva, free transfer: 8 points against 2. `plan_gw10` had this move for GW12
+and Cherki → Rogers for GW11; the re-plan brought the Silva move forward and dropped Rogers.
+Rogers scored 5, but Cherki was on the bench either way, and Guéhi's replacement was in the XI.
+Captain Haaland, top of the pool at 5.88 xP: 2 points on 1.03 xG, so 4. It is his third week
+running on 2. `ep_next` would have captained Konsa (10.7) for 2. The fielded XI was the model's
+best XI from the 15: forecast 55.6, actual 45 against a 35 average.
+
+The miss was the Arsenal triple. Raya, Gabriel and Konsa returned 3 points from 13.7 xP in a 2-2
+at Newcastle, and Raya came off at 69 minutes with a shoulder injury. Mbeumo (4.02 xP) was taken
+off at 21 minutes after Manchester United went down to ten men, which is not a forecasting miss.
+On the bench, Ajayi scored 6; 8 points were left there. Best XI from the 15 in hindsight, with
+Rudoni as captain: 58. Calvert-Lewin, sold in GW10, scored 9 to Evanilson's 6; over the two weeks
+since the move it is Evanilson 15, Calvert-Lewin 11.
+
+The bench keeper was the exposed slot: Dubravka has zero availability, so Raya's injury leaves no
+playing keeper. `plan_gw08`, `plan_gw09` and the 9 November `plan_gw11` all had a Dubravka sale
+that kept being pushed back.
+
+**Plan churn.** Guéhi → Silva survived from `plan_gw10`, a week early. Emersonn → Barry also
+survived, moved from GW14 to GW13. Cherki → Rogers became Cherki → Doku for GW14, Ajayi → Murillo
+was dropped, and the keeper move returned as Dubravka → Trafford for GW12.
+
+### Chip deadline bug
+
+Found while reading the GW12 advice: the live advisor counted chip deadlines against the
+gameweeks `load_live_history` had built, which stop at the planning horizon. More than five weeks
+before an expiry every threshold was 20% too low. Fixed in `1736bd2`. It had not yet changed any
+advice.
+
 ## Files
 
 | File | What it is |
