@@ -5,6 +5,7 @@ from football_stats.simulation import (
     BASE,
     Parameters,
     _poisson_fit,
+    error_by_gameweek,
     fit_goals,
     latest_ratings,
     rate,
@@ -139,3 +140,42 @@ def test_snapshots_wait_until_every_team_has_played():
     # 12 teams: after 10 matches only T0 has been at home, and T11 has not played at all
     matches = season("2020-21", [f"T{i:02d}" for i in range(12)], "2020-08-01")
     assert len(snapshots(matches)[0]) == 20
+
+
+def test_error_by_gameweek_scores_each_table_then_averages():
+    def table(season, snapshot, gameweek, good):
+        """Four teams; a good forecast has the order right, a bad one has it reversed."""
+        final = [1, 2, 3, 4]
+        order = final if good else final[::-1]
+        return pd.DataFrame(
+            {
+                "season": season,
+                "snapshot": snapshot,
+                "gameweek": gameweek,
+                "team": list("ABCD"),
+                "final_position": final,
+                "final_points": [80, 60, 40, 20],
+                "expected_position": order,
+                "expected_points": [100 - 20 * p + (0 if good else 5) for p in order],
+                "champions": [p == 1 for p in final],
+                "top4": True,
+                "relegated": False,
+                "simulation_title": [1 / p for p in order],
+                "simulation_top4": 1.0,
+                "simulation_relegation": 0.0,
+            }
+        )
+
+    rows = pd.concat(
+        [table("a", 0, 1, good=False), table("b", 0, 1, good=True), table("a", 1, 2, good=True)]
+    )
+    errors = error_by_gameweek(rows)
+    assert list(errors.index) == [1, 2]
+    assert list(errors["tables"]) == [2, 1]
+    assert errors.loc[2, "points_error"] == 0
+    assert errors.loc[2, "position_error"] == 0
+    assert errors.loc[2, "favourite_wins"] == 1
+    assert errors.loc[1, "favourite_wins"] == 0.5
+    assert errors.loc[1, "position_error"] == pytest.approx((3 + 1 + 1 + 3) / 4 / 2)
+    assert errors.loc[1, "top4_right"] == 4
+    assert errors.loc[1, "relegation_right"] == 0

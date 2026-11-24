@@ -275,12 +275,15 @@ def backtest(results: pd.DataFrame, sims: int = 2000, first: str = BACKTEST_FROM
 
     The simulation's parameters are fitted on the seasons before ``first``; XGBoost is fitted on
     every other season than the one being predicted. Returns one row per team and snapshot with
-    the truth and both sets of probabilities.
+    the truth, both sets of probabilities, and the simulation's expected points and position
+    beside the final ones. ``gameweek`` is the matches played across the league divided by
+    ``SNAPSHOT_EVERY``, rounded.
     """
     params = fit_parameters(results[results["season"] < first])
     full = standings(results)
     data = training_data(full)
-    final = full.drop_duplicates(["season", "team"]).set_index(["season", "team"])
+    final = full.sort_values("gameweek").groupby(["season", "team"]).tail(1)
+    final = final.set_index(["season", "team"])
     seasons = [s for s in sorted(data["season"].unique()) if s >= first]
     rows = []
     for season in seasons:
@@ -290,8 +293,16 @@ def backtest(results: pd.DataFrame, sims: int = 2000, first: str = BACKTEST_FROM
         for number, played in enumerate(snapshots(results[results["season"] == season])):
             table = forecast(history, played, params, sims, seed=number)
             summary = summarise(table[["team", "expected_points", *range(1, len(table) + 1)]])
-            row = table[["season", "team"]].assign(snapshot=number, played=len(played))
-            finished = final.loc[list(zip(row["season"], row["team"], strict=True))]
+            finished = final.loc[list(zip(table["season"], table["team"], strict=True))]
+            row = table[["season", "team"]].assign(
+                snapshot=number,
+                played=len(played),
+                gameweek=round(len(played) / SNAPSHOT_EVERY),
+                expected_points=summary["expected_points"].to_numpy(),
+                expected_position=summary["expected_position"].to_numpy(),
+                final_points=finished["points"].to_numpy(),
+                final_position=finished["final_position"].to_numpy(),
+            )
             features = fill_promoted(table)
             for outcome in OUTCOMES:
                 place = finished["final_position"].to_numpy()
@@ -314,6 +325,34 @@ def backtest_scores(rows: pd.DataFrame, sims: int) -> pd.DataFrame:
             p = rows[f"{model}_{outcome.name}"].clip(edge, 1 - edge)
             table[(outcome.name, model)] = {"log_loss": log_loss(y, p), "brier": brier(y, p)}
     return pd.DataFrame(table).T
+
+
+def error_by_gameweek(rows: pd.DataFrame) -> pd.DataFrame:
+    """How wrong the simulation was at each gameweek of the backtest, averaged over its tables.
+
+    ``points_error`` and ``position_error`` are the average gap per team between the expected
+    and the final value. ``favourite_wins`` is the share of tables whose most likely champion
+    went on to win. ``top4_right`` and ``relegation_right`` count how many of the teams rated
+    most likely for those places (four and three of them) ended up there.
+    """
+
+    def one_table(table: pd.DataFrame) -> pd.Series:
+        out = {
+            "points_error": (table["expected_points"] - table["final_points"]).abs().mean(),
+            "position_error": (table["expected_position"] - table["final_position"]).abs().mean(),
+        }
+        for outcome, name in zip(
+            OUTCOMES, ["favourite_wins", "top4_right", "relegation_right"], strict=True
+        ):
+            picks = table.nlargest(outcome.places, f"simulation_{outcome.name}")
+            out[name] = picks[outcome.label].sum()
+        return pd.Series(out)
+
+    tables = rows.groupby(["season", "snapshot", "gameweek"])
+    per_table = pd.DataFrame({key: one_table(table) for key, table in tables}).T
+    per_table.index.names = ["season", "snapshot", "gameweek"]
+    by_gameweek = per_table.groupby("gameweek")
+    return by_gameweek.mean().assign(tables=by_gameweek.size())
 
 
 def main() -> None:
@@ -339,6 +378,13 @@ def main() -> None:
             "(lower is better):\n"
         )
         print(backtest_scores(rows, sims).round(4))
+        errors = error_by_gameweek(rows)
+        print("\nSimulation error by gameweek:\n")
+        print(errors.round(2).to_string())
+        path = args.out.with_name("backtest_by_gameweek.csv")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        errors.to_csv(path)
+        print(f"-> {path}")
         return
 
     season = results["season"].max()

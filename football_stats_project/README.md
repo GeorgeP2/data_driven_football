@@ -61,6 +61,17 @@ loss; simulation settings fitted on the seasons before 2010-11):
 | Top four | 0.176 | 0.145 |
 | Relegation | 0.196 | 0.185 |
 
+How the simulation's error falls through a season, from the same backtest (`--backtest` prints
+every gameweek and writes `outputs/backtest_by_gameweek.csv`):
+
+| After gameweek | Points error per team | Position error | Title favourite wins | Top-four picks right (of 4) | Relegation picks right (of 3) |
+|----------------|-----------------------|----------------|----------------------|-----------------------------|-------------------------------|
+| 1 | 8.4 | 2.9 | 36% | 2.6 | 1.4 |
+| 10 | 6.6 | 2.3 | 56% | 3.1 | 1.9 |
+| 20 | 4.8 | 1.7 | 84% | 3.4 | 1.9 |
+| 30 | 3.3 | 1.3 | 83% | 3.4 | 2.3 |
+| 37 | 1.0 | 0.5 | 100% | 3.9 | 2.9 |
+
 _Key figure(s):_
 
 <!-- ![](reports/figures/example.png) -->
