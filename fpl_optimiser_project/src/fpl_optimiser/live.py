@@ -95,6 +95,17 @@ def next_gameweek(payload: dict[str, Any]) -> int | None:
     return None
 
 
+def season_gameweeks(payload: dict[str, Any]) -> list[int]:
+    """Every gameweek of the season, played or not.
+
+    The chip rules count the gameweeks left before a chip expires. `load_live_history` only
+    builds as far as the planning horizon, so counting *its* gameweeks makes every deadline look
+    at most a horizon away: at GW12 with a five-week horizon the GW19 expiry appeared four weeks
+    off instead of seven, and every chip threshold was 20% too low.
+    """
+    return sorted(int(event["id"]) for event in payload.get("events", []))
+
+
 def injury_availability(payload: dict[str, Any]) -> dict[int, float]:
     """Each player's chance of featuring, from FPL's own injury flags.
 

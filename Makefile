@@ -11,7 +11,7 @@ help: ## Show available commands
 setup: ## Create venv and install core + dev + notebook deps
 	$(PYTHON) -m venv $(VENV)
 	$(BIN)/pip install -U pip
-	$(BIN)/pip install -e ".[dev,notebooks]"
+	$(BIN)/pip install -e ".[dev,notebooks,ml]"
 	$(BIN)/pre-commit install
 	$(BIN)/python -m ipykernel install --user --name football --display-name "Python (football)"
 
